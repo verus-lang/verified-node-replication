@@ -1,2 +1,11 @@
 .python
 target
+verified/runs
+verified/*.csv
+verified/*.json
+upstream/runs
+upstream/*.csv
+upstream/*.json
+*.pdf
+*.png
+*.json

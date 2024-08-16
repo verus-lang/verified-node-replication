@@ -68,7 +68,10 @@ def run(bench, n_replicas, n_threads, reads_pct, run_id_num, numa_policy):
     cmd = '%s %d %d %d %s %s' % (bench, n_threads, reads_pct,
                                    SECONDS, numa_policy, run_id_num)
     print(cmd)
-    subprocess.run(cmd, shell=True, check=False)
+    # squash warnings...
+    my_env = os.environ
+    my_env["RUSTFLAGS"] = "-Awarnings"
+    subprocess.run(cmd, shell=True, check=False, env=my_env)
 
 def run_all():
     print(f'Found {NODES} NUMA nodes with {CORES_PER_NODE} cores each')
@@ -104,7 +107,6 @@ def run_all():
                         run(bench, n_replicas, n_threads, reads_pct, run_id_num, mode)
 
                     combine_data_files()
-                    subprocess.run('./plot.py', shell=True, check=False)
                     subprocess.run('cp *.json *.png *.pdf *.pgf plot.py runs/%s' % run_id, shell=True, check=False)
 
 if __name__ == '__main__':

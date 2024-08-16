@@ -57,11 +57,18 @@ fn obtain_dotnet(ironsync_dir: &Path) -> PathBuf {
 
 fn run_linear_dafny() -> PathBuf {
 
-    let cwd = std::env::current_dir().unwrap();
-    let benchmarks_dir = cwd.parent().unwrap();
-    let nr_dir = benchmarks_dir.parent().unwrap();
+    let this_file = file!();
+    let this_file_path = Path::new(this_file).canonicalize().unwrap();
 
-    let ironsync_dir = nr_dir.join("ironsync-osdi2023");
+    let benchmarks_dir = this_file_path.parent().unwrap().parent().unwrap().parent().unwrap();
+
+    // let cwd = std::env::current_dir().unwrap();
+    // let benchmarks_dir = cwd.parent().unwrap();
+    // let nr_dir = benchmarks_dir.parent().unwrap();
+
+    let ironsync_dir = benchmarks_dir.join("ironsync-osdi2023");
+
+    println!("ironsync path: {}", ironsync_dir.display());
 
     let build_script = ironsync_dir.join("run-dafny-in-docker.sh");
     if !build_script.is_file() {
