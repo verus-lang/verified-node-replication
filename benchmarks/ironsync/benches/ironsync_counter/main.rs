@@ -186,12 +186,12 @@ fn run_bench(nr_dir: PathBuf) {
     println!("[run] running benchmark");
     let output = Command::new("./bench.py")
         .current_dir(nr_dir.clone())
-        .output()
+        .status()
         .expect("[run] failed to exec make command");
-    if !output.status.success() {
-        println!("status: {}", output.status);
-        io::stdout().write_all(&output.stdout).unwrap();
-        io::stderr().write_all(&output.stderr).unwrap();
+    if !output.success() {
+        // println!("status: {}", output.status);
+        // io::stdout().write_all(&output.stdout).unwrap();
+        // io::stderr().write_all(&output.stderr).unwrap();
         panic!("[run] failed to clean the build");
     }
 
