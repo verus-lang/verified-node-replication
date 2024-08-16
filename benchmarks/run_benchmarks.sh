@@ -22,7 +22,7 @@ cp verified/data.json data-verified.json
 
 echo "running ironsync comparison"
 (cd ironsync && cargo bench)
-cp ironsync-osdi2023/concurrency/node-replication/data.json data-ironsync.json
+cp ironsync/ironsync-osdi2023/concurrency/node-replication/data.json data-ironsync.json
 
 echo "ondemand" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 
