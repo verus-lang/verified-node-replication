@@ -20,8 +20,7 @@ use bench_utils::benchmark::*;
 use bench_utils::mkbench::{self, DsInterface, NodeReplicated};
 use bench_utils::topology::ThreadMapping;
 use bench_utils::Operation;
-use node_replication::{Dispatch};
-
+use node_replication::Dispatch;
 
 /// The initial amount of entries all Hashmaps are initialized with
 #[cfg(feature = "smokebench")]
@@ -56,7 +55,6 @@ pub enum OpRd {
     /// Get item from the hash-map.
     Get(u64),
 }
-
 
 /// Single-threaded implementation of the stack
 ///

@@ -10,15 +10,17 @@ use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use logging::warn;
-use rand::seq::SliceRandom;
 use rand::prelude::*;
+use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 
 use bench_utils::benchmark::*;
 use bench_utils::mkbench::{self, DsInterface};
 use bench_utils::topology::ThreadMapping;
 use bench_utils::Operation;
-use verified_node_replication::{Dispatch, AffinityFn, NodeReplicated, ReplicaId, ThreadToken, NodeReplicatedT};
+use verified_node_replication::{
+    AffinityFn, Dispatch, NodeReplicated, NodeReplicatedT, ReplicaId, ThreadToken,
+};
 
 use builtin::Tracked;
 
@@ -131,7 +133,10 @@ impl DsInterface for VNRWrapper {
     /// - `logs`: How many logs the data-structure should be partitioned over.
     fn new(replicas: NonZeroUsize, logs: NonZeroUsize, log_size: usize) -> Self {
         VNRWrapper {
-            val: NodeReplicatedT::<NrCounter>::new(replicas.into(), AffinityFn::new(mkbench::chg_affinity)),
+            val: NodeReplicatedT::<NrCounter>::new(
+                replicas.into(),
+                AffinityFn::new(mkbench::chg_affinity),
+            ),
         }
     }
 

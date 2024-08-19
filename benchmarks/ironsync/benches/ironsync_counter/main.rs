@@ -3,15 +3,14 @@
 
 //! Defines a hash-map that can be replicated.
 
+use env_logger::Logger;
 use std::env;
 use std::fs::{remove_file, OpenOptions};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::io::{self, Write};
-use env_logger::Logger;
 
 fn obtain_dotnet(ironsync_dir: &Path) -> PathBuf {
-
     // TODO: add an exist check!
 
     let dotnet_dir = ironsync_dir.join(".dotnet");
@@ -26,7 +25,11 @@ fn obtain_dotnet(ironsync_dir: &Path) -> PathBuf {
 
     let output = Command::new("wget")
         .current_dir(ironsync_dir)
-        .args(&["https://dot.net/v1/dotnet-install.sh", "-O", "dotnet-install.sh"])
+        .args(&[
+            "https://dot.net/v1/dotnet-install.sh",
+            "-O",
+            "dotnet-install.sh",
+        ])
         .output()
         .expect("failed to downlaod the dotnet install script");
 
@@ -39,7 +42,13 @@ fn obtain_dotnet(ironsync_dir: &Path) -> PathBuf {
 
     let output = Command::new("bash")
         .current_dir(ironsync_dir)
-        .args(&["dotnet-install.sh", "--channel", "5.0" , "--install-dir", ".dotnet"])
+        .args(&[
+            "dotnet-install.sh",
+            "--channel",
+            "5.0",
+            "--install-dir",
+            ".dotnet",
+        ])
         .output()
         .expect("failed to downlaod the dotnet install script");
 
@@ -56,11 +65,16 @@ fn obtain_dotnet(ironsync_dir: &Path) -> PathBuf {
 }
 
 fn run_linear_dafny() -> PathBuf {
-
     let this_file = file!();
     let this_file_path = Path::new(this_file).canonicalize().unwrap();
 
-    let benchmarks_dir = this_file_path.parent().unwrap().parent().unwrap().parent().unwrap();
+    let benchmarks_dir = this_file_path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
 
     // let cwd = std::env::current_dir().unwrap();
     // let benchmarks_dir = cwd.parent().unwrap();
@@ -72,7 +86,7 @@ fn run_linear_dafny() -> PathBuf {
 
     let build_script = ironsync_dir.join("run-dafny-in-docker.sh");
     if !build_script.is_file() {
-        let output =  Command::new("git")
+        let output = Command::new("git")
             .args(&["submodule", "update", "--init"])
             .output()
             .expect("failed to execute process");
@@ -118,8 +132,7 @@ fn run_linear_dafny() -> PathBuf {
 
     if !output.status.success() {
         if dafny_path.exists() {
-            std::fs::remove_dir_all(dafny_path)
-                .expect("[dafny] failed to remove .dafny directory");
+            std::fs::remove_dir_all(dafny_path).expect("[dafny] failed to remove .dafny directory");
         }
 
         println!("[dafny] Building LinearDafny...");
@@ -129,10 +142,10 @@ fn run_linear_dafny() -> PathBuf {
             .output()
             .expect("[dafny] failed to run `artifact-setup-dafny.sh` command");
         if !output.status.success() {
-                println!("status: {}", output.status);
-                io::stdout().write_all(&output.stdout).unwrap();
-                io::stderr().write_all(&output.stderr).unwrap();
-                panic!("[dafny] Dafny Build has failed");
+            println!("status: {}", output.status);
+            io::stdout().write_all(&output.stdout).unwrap();
+            io::stderr().write_all(&output.stderr).unwrap();
+            panic!("[dafny] Dafny Build has failed");
         }
 
         println!("[dafny] Dafny version ok.");
@@ -158,10 +171,11 @@ fn run_linear_dafny() -> PathBuf {
     println!("[dafny] building nr binaries");
     let nr_dir = ironsync_dir.join("concurrency/node-replication");
 
-    let filtered_env : std::collections::HashMap<String, String> =
-        env::vars().filter(|&(ref k, _)|
+    let filtered_env: std::collections::HashMap<String, String> = env::vars()
+        .filter(|&(ref k, _)| {
             !k.starts_with("CARGO") && k != "RUSTUP_TOOLCHAIN" && k != "RUST_RECURSION_COUNT"
-        ).collect();
+        })
+        .collect();
 
     let output = Command::new("./compile-bench.sh")
         .env_clear()
@@ -180,7 +194,6 @@ fn run_linear_dafny() -> PathBuf {
 
     nr_dir
 }
-
 
 fn run_bench(nr_dir: PathBuf) {
     println!("[run] running benchmark");
@@ -211,7 +224,6 @@ pub fn disable_dvfs() {
         .expect("failed to change scaling governor");
     assert!(o.status.success());
 }
-
 
 fn main() {
     let _r = env_logger::try_init();

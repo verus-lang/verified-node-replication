@@ -9,16 +9,15 @@ use std::marker::Sync;
 use std::time::Duration;
 
 use logging::warn;
-use rand::seq::SliceRandom;
 use rand::prelude::*;
+use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 
 use bench_utils::benchmark::*;
 use bench_utils::mkbench::{self, DsInterface, NodeReplicated};
 use bench_utils::topology::ThreadMapping;
 use bench_utils::Operation;
-use node_replication::{Dispatch};
-
+use node_replication::Dispatch;
 
 /// The initial amount of entries all Hashmaps are initialized with
 #[cfg(feature = "smokebench")]
@@ -45,7 +44,7 @@ pub const NOP: usize = 25_000_000;
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum OpWr {
     /// Increment the Counter
-    Inc
+    Inc,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -93,9 +92,7 @@ impl Dispatch for NrCounter {
     /// Implements how we execute operation from the log against our local stack
     fn dispatch_mut(&mut self, op: Self::WriteOperation) -> Self::Response {
         match op {
-            OpWr::Inc => {
-                Ok(self.inc())
-            }
+            OpWr::Inc => Ok(self.inc()),
         }
     }
 }
@@ -107,10 +104,7 @@ impl Dispatch for NrCounter {
 ///  - `write`: true will Put, false will generate Get sequences
 ///  - `span`: Maximum key
 ///  - `distribution`: Supported distribution 'uniform' or 'skewed'
-pub fn generate_operations(
-    nop: usize,
-    write_ratio: usize,
-) -> Vec<Operation<OpRd, OpWr>> {
+pub fn generate_operations(nop: usize, write_ratio: usize) -> Vec<Operation<OpRd, OpWr>> {
     let mut ops = Vec::with_capacity(nop);
 
     let mut rng = ChaCha8Rng::seed_from_u64(42);
