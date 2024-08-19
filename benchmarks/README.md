@@ -4,11 +4,19 @@ The following benchmarks are used in the evaluation for the paper "Verus: A Prac
 
 ## Dependencies
 
-To run the benchmarks, you need to install the following dependencies besides Rust.
+To run the benchmarks, you need to install the following dependencies:
 
 ```
-sudo apt install liburcu-dev libhwloc-dev python3-venv  texlive-xetex texlive-fonts-extra
+sudo apt-get install curl wget liburcu-dev libhwloc-dev python3-venv  texlive-xetex texlive-fonts-extra pkg-config clang make g++
 ```
+
+Install Rust using rustup:
+
+```shell
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+. "$HOME/.cargo/env"
+```
+
 
 Linear Dafny requires a specific version of libssl. You can install this with the follwing command:
 ```
