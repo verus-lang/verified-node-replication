@@ -419,9 +419,6 @@ impl Default for VSpace {
                 )
                 .is_ok());
         }
-
-        logging::error!("vs.mem_counter {}", vs.mem_counter);
-
         vs
     }
 }
