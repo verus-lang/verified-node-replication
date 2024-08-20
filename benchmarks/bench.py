@@ -31,7 +31,10 @@ def count_cores_per_numa_node():
 
 SECONDS = 60
 
-MODES=['fill', 'interleave']
+MODES=[
+    'fill'
+    # , 'interleave' -- disable for speeding up SOSP'24 artifact evaluation
+]
 CORES_PER_NODE = count_cores_per_numa_node()
 NODES = count_numa_nodes()
 MAX_THREADS = NODES * CORES_PER_NODE
