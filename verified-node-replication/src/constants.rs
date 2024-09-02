@@ -24,7 +24,7 @@ pub open const LOG_SIZE: usize = 512 * 1024;
 
 // 4 * 1024 * 1024;
 /// maximum number of threads per replica
-pub open const MAX_THREADS_PER_REPLICA: usize = 64;
+pub open const MAX_THREADS_PER_REPLICA: usize = 128;
 
 pub open const MAX_PENDING_OPS: usize = 1;
 
