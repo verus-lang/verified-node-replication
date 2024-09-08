@@ -32,12 +32,14 @@ def count_cores_per_numa_node():
 SECONDS = 60
 
 MODES=[
-    'fill'
-    # , 'interleave' -- disable for speeding up SOSP'24 artifact evaluation
+    'fill',
+    'interleave'
 ]
 CORES_PER_NODE = count_cores_per_numa_node()
 NODES = count_numa_nodes()
 MAX_THREADS = NODES * CORES_PER_NODE
+N_THREADS = [MAX_THREADS, 4] + [i * (CORES_PER_NODE // 4) for i in range(1, NODES * 4)]
+print(f"Used Threads: {N_THREADS}")
 
 NR_BENCHES = ['cargo run --release --bin vspace']
 #READS_PCT = [100, 95, 50, 0, 90]
@@ -46,13 +48,6 @@ READS_PCT = [100, 90, 0]
 ITERS = 1
 
 TRANSPARENT_HUGEPAGES = True
-
-def reorder(l):
-  if len(l) < 2:
-    return l
-  p = len(l) // 2
-  return [l[p]] + reorder(l[p+1:] + l[:p])
-N_THREADS = [MAX_THREADS, 4] + reorder(list(range(12, MAX_THREADS, 12)))
 
 
 def combine_data_files():
