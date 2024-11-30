@@ -118,16 +118,16 @@ pub struct ReplicatedDataStructure<DT: Dispatch> {
 //  - Dafny: predicate WF(nodeId: nat, cb_loc_s: nat) {
 pub open spec fn wf(&self, nid: NodeId, inst: UnboundedLog::Instance<DT>, cb: CyclicBuffer::Instance<DT>) -> bool {
     predicate {
-        &&& self.combiner@@.instance == inst
-        &&& self.replica@@.instance == inst
+        &&& self.combiner@.instance_id() == inst.id()
+        &&& self.replica@.instance_id() == inst.id()
 
-        &&& self.replica@@.value == self.data.view()
-        &&& self.replica@@.key == nid
-        &&& self.combiner@@.value.is_Ready()
-        &&& self.combiner@@.key == nid
-        &&& self.cb_combiner@@.key == nid
-        &&& self.cb_combiner@@.value.is_Idle()
-        &&& self.cb_combiner@@.instance == cb
+        &&& self.replica@.value() == self.data.view()
+        &&& self.replica@.key() == nid
+        &&& self.combiner@.value().is_Ready()
+        &&& self.combiner@.key() == nid
+        &&& self.cb_combiner@.key() == nid
+        &&& self.cb_combiner@.value().is_Idle()
+        &&& self.cb_combiner@.instance_id() == cb.id()
     }
 }}  // struct_with_invariants
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -286,8 +286,8 @@ impl<DT: Dispatch> Replica<DT> {
                 Tracked(fc_combiner0),  // FlatCombiner::combiner
             ) = FlatCombiner::Instance::initialize(num_threads as nat);
             fc_instance = fc_instance0;
-            fc_clients = fc_clients0;
-            fc_slots = fc_slots0;
+            fc_clients = fc_clients0.into_map();
+            fc_slots = fc_slots0.into_map();
             fc_combiner = fc_combiner0;
         }
         //
@@ -348,17 +348,17 @@ impl<DT: Dispatch> Replica<DT> {
                 forall|i: nat|
                     #![trigger fc_slots[i]]
                     idx <= i < num_threads ==> {
-                        &&& fc_slots[i]@.value.is_Empty()
-                        &&& fc_slots[i]@.key == i
-                        &&& fc_slots[i]@.instance == fc_instance
+                        &&& fc_slots[i].value().is_Empty()
+                        &&& fc_slots[i].key() == i
+                        &&& fc_slots[i].instance_id() == fc_instance.id()
                     },
                 forall|i: nat| idx <= i < num_threads ==> fc_clients.contains_key(i),
                 forall|i: nat|
                     #![trigger fc_clients[i]]
                     idx <= i < num_threads ==> {
-                        &&& fc_clients[i]@.instance == fc_instance
-                        &&& fc_clients[i]@.key == i
-                        &&& fc_clients[i]@.value.is_Idle()
+                        &&& fc_clients[i].instance_id() == fc_instance.id()
+                        &&& fc_clients[i].key() == i
+                        &&& fc_clients[i].value().is_Idle()
                     },
                 forall|i: nat| idx <= i < num_threads ==> fc_slots.contains_key(i),
                 forall|i|
@@ -374,7 +374,7 @@ impl<DT: Dispatch> Replica<DT> {
                         &&& thread_tokens[i].wf2(unbounded_log_instance.num_replicas())
                         &&& thread_tokens[i].thread_id_spec() == i
                         &&& thread_tokens[i].rid@ == replica_token.id_spec()
-                        &&& thread_tokens[i].fc_client@@.instance == fc_instance
+                        &&& thread_tokens[i].fc_client@.instance_id() == fc_instance.id()
                         &&& thread_tokens[i].batch_perm@@.pcell == contexts[i].batch.0.id()
                     },
         {
@@ -704,9 +704,9 @@ impl<DT: Dispatch> Replica<DT> {
             self.wf(),
             old(num_ops_per_thread).len() == 0,
             old(operations).len() == 0,
-            flat_combiner@@.instance == self.flat_combiner_instance@,
-            flat_combiner@@.value.is_Collecting(),
-            flat_combiner@@.value.get_Collecting_0().len() == 0,
+            flat_combiner@.instance_id() == self.flat_combiner_instance@.id(),
+            flat_combiner@.value().is_Collecting(),
+            flat_combiner@.value().get_Collecting_0().len() == 0,
         ensures
             operations.len() <= MAX_REQUESTS,
             response@.collect_thread_ops_post(
@@ -736,16 +736,16 @@ impl<DT: Dispatch> Replica<DT> {
                 num_ops_per_thread.len() == thread_idx,
                 self.contexts.len() == num_registered_threads,
                 self.flat_combiner_instance@.num_threads() == num_registered_threads,
-                flat_combiner@@.value.is_Collecting(),
-                flat_combiner@@.value.get_Collecting_0().len() == thread_idx,
-                flat_combiner@@.instance == self.flat_combiner_instance@,
+                flat_combiner@.value().is_Collecting(),
+                flat_combiner@.value().get_Collecting_0().len() == thread_idx,
+                flat_combiner@.instance_id() == self.flat_combiner_instance@.id(),
                 forall|i: nat|
-                    i < flat_combiner@@.value.get_Collecting_0().len() ==> (
+                    i < flat_combiner@.value().get_Collecting_0().len() ==> (
                     num_ops_per_thread[i as int] > 0) == (
-                    #[trigger] flat_combiner@@.value.get_Collecting_0()[i as int]).is_some(),
+                    #[trigger] flat_combiner@.value().get_Collecting_0()[i as int]).is_some(),
                 forall|i: nat|
-                    i < flat_combiner@@.value.get_Collecting_0().len() && (
-                    #[trigger] flat_combiner@@.value.get_Collecting_0()[i as int]).is_some() ==> {
+                    i < flat_combiner@.value().get_Collecting_0().len() && (
+                    #[trigger] flat_combiner@.value().get_Collecting_0()[i as int]).is_some() ==> {
                         &&& cell_permissions.contains_key(i)
                         &&& cell_permissions[i]@.pcell === self.contexts@[i as int].batch.0.id()
                         &&& cell_permissions[i]@.value.is_some()
@@ -755,16 +755,16 @@ impl<DT: Dispatch> Replica<DT> {
                     #![trigger updates[i]]
                     i < request_ids.len() ==> {
                         &&& #[trigger] updates.contains_key(i)
-                        &&& updates[i]@.instance == self.unbounded_log_instance
-                        &&& updates[i]@.key == request_ids[i as int]
-                        &&& updates[i]@.value.is_Init()
-                        &&& updates[i]@.value.get_Init_op() == operations[i as int]
+                        &&& updates[i].instance_id() == self.unbounded_log_instance@.id()
+                        &&& updates[i].key() == request_ids[i as int]
+                        &&& updates[i].value().is_Init()
+                        &&& updates[i].value().get_Init_op() == operations[i as int]
                     },
                 rids_match(
-                    flat_combiner@@.value.get_Collecting_0(),
+                    flat_combiner@.value().get_Collecting_0(),
                     request_ids,
                     0,
-                    flat_combiner@@.value.get_Collecting_0().len(),
+                    flat_combiner@.value().get_Collecting_0().len(),
                     0,
                     request_ids.len(),
                 ),
@@ -780,8 +780,8 @@ impl<DT: Dispatch> Replica<DT> {
                 if num_ops == 1 {
                     self.flat_combiner_instance.borrow().pre_combiner_collect_request(&g.slots, flat_combiner.borrow());
 
-                    rids_match_add_rid(flat_combiner.view().view().value.get_Collecting_0(), request_ids,
-                        0, flat_combiner.view().view().value.get_Collecting_0().len(), 0, request_ids.len(),g.update.get_Some_0().view().key);
+                    rids_match_add_rid(flat_combiner.view().value().get_Collecting_0(), request_ids,
+                        0, flat_combiner.view().value().get_Collecting_0().len(), 0, request_ids.len(),g.update.get_Some_0().key());
 
                     update_req = g.update;
                     batch_perms = g.batch_perms;
@@ -790,8 +790,8 @@ impl<DT: Dispatch> Replica<DT> {
                     g.update = None;
                     g.batch_perms = None;
                 } else {
-                    rids_match_add_none(flat_combiner.view().view().value.get_Collecting_0(), request_ids,
-                        0, flat_combiner.view().view().value.get_Collecting_0().len(), 0, request_ids.len());
+                    rids_match_add_none(flat_combiner.view().value().get_Collecting_0(), request_ids,
+                        0, flat_combiner.view().value().get_Collecting_0().len(), 0, request_ids.len());
 
                     self.flat_combiner_instance.borrow().combiner_collect_empty(&g.slots, flat_combiner.borrow_mut());
                     update_req = None;
@@ -809,7 +809,7 @@ impl<DT: Dispatch> Replica<DT> {
                     cell_permissions.tracked_insert(thread_idx as nat, batch_token_value);
                 }
                 proof {
-                    request_ids = request_ids.push(update_req@.key);
+                    request_ids = request_ids.push(update_req.key());
                 }
                 operations.push(op);
             }
@@ -849,10 +849,10 @@ impl<DT: Dispatch> Replica<DT> {
                 self.contexts@,
             ),
             rids_match(
-                thread_ops_data@.flat_combiner@@.value.get_Responding_0(),
+                thread_ops_data@.flat_combiner@.value().get_Responding_0(),
                 thread_ops_data@.request_ids@,
                 0,
-                thread_ops_data@.flat_combiner@@.value.get_Responding_0().len(),
+                thread_ops_data@.flat_combiner@.value().get_Responding_0().len(),
                 0,
                 thread_ops_data@.request_ids@.len(),
             ),
@@ -884,17 +884,17 @@ impl<DT: Dispatch> Replica<DT> {
                 num_registered_threads == MAX_THREADS_PER_REPLICA,
                 self.wf(),
                 self.flat_combiner_instance@.num_threads() == num_registered_threads,
-                flat_combiner@.instance == self.flat_combiner_instance@,
-                flat_combiner@.value.is_Responding(),
-                flat_combiner@.value.get_Responding_1() == thread_idx,
-                flat_combiner@.value.get_Responding_0().len() == MAX_THREADS_PER_REPLICA,
+                flat_combiner.instance_id() == self.flat_combiner_instance@.id(),
+                flat_combiner.value().is_Responding(),
+                flat_combiner.value().get_Responding_1() == thread_idx,
+                flat_combiner.value().get_Responding_0().len() == MAX_THREADS_PER_REPLICA,
                 forall|i: nat|
-                    i < flat_combiner@.value.get_Responding_0().len() ==> (
+                    i < flat_combiner.value().get_Responding_0().len() ==> (
                     num_ops_per_thread[i as int] > 0) == (
-                    #[trigger] flat_combiner@.value.get_Responding_0()[i as int]).is_some(),
+                    #[trigger] flat_combiner.value().get_Responding_0()[i as int]).is_some(),
                 forall|i: nat|
-                    thread_idx <= i < flat_combiner@.value.get_Responding_0().len() && (
-                    #[trigger] flat_combiner@.value.get_Responding_0()[i as int]).is_some() ==> {
+                    thread_idx <= i < flat_combiner.value().get_Responding_0().len() && (
+                    #[trigger] flat_combiner.value().get_Responding_0()[i as int]).is_some() ==> {
                         &&& cell_permissions.contains_key(i)
                         &&& cell_permissions[i]@.pcell === self.contexts@[i as int].batch.0.id()
                         &&& cell_permissions[i]@.value.is_some()
@@ -907,26 +907,26 @@ impl<DT: Dispatch> Replica<DT> {
                     #![trigger updates[i]]
                     resp_idx <= i < request_ids@.len() ==> {
                         &&& updates.contains_key(i)
-                        &&& updates[i]@.key == request_ids@[i as int]
-                        &&& updates[i]@.value.is_Done()
-                        &&& updates[i]@.instance == self.unbounded_log_instance@
-                        &&& updates[i]@.value.get_Done_ret() == responses[i as int]
+                        &&& updates[i].key() == request_ids@[i as int]
+                        &&& updates[i].value().is_Done()
+                        &&& updates[i].instance_id() == self.unbounded_log_instance@.id()
+                        &&& updates[i].value().get_Done_ret() == responses[i as int]
                     },
                 rids_match(
-                    flat_combiner@.value.get_Responding_0(),
+                    flat_combiner.value().get_Responding_0(),
                     request_ids@,
                     thread_idx as nat,
-                    flat_combiner@.value.get_Responding_0().len(),
+                    flat_combiner.value().get_Responding_0().len(),
                     resp_idx as nat,
                     request_ids@.len(),
                 ),
         {
             proof {
                 rids_match_pop(
-                    flat_combiner@.value.get_Responding_0(),
+                    flat_combiner.value().get_Responding_0(),
                     request_ids@,
                     thread_idx as nat,
-                    flat_combiner@.value.get_Responding_0().len(),
+                    flat_combiner.value().get_Responding_0().len(),
                     resp_idx as nat,
                     request_ids@.len(),
                 );
@@ -1029,17 +1029,14 @@ impl<DT: Dispatch> Replica<DT> {
             result.1.wf(&self),
             result.1.batch_perm@@.pcell
                 == self.contexts[result.1.thread_id_spec() as int].batch.0.id(),
-            is_readonly_stub(result.2@, ticket@@.key, result.0, slog.unbounded_log_instance@),
+            is_readonly_stub(result.2@, ticket@.key(), result.0, slog.unbounded_log_instance@),
     {
         // let tracked local_reads : UnboundedLog::local_reads<DT>;
         // proof {
         //     let tracked ticket = self.unbounded_log_instance.borrow().readonly_start(op);
         //     local_reads = ticket.1.get();
         // }
-        let ghost rid: nat = ticket@@.key;
-        proof {
-            rid = ticket@@.key;
-        }
+        let ghost rid: nat = ticket@.key();
         let ghost nid = tkn.replica_id_spec();
         // Step 1: Read the local tail value
         // let ctail = slog.get_ctail();
@@ -1060,15 +1057,15 @@ impl<DT: Dispatch> Replica<DT> {
             invariant
                 self.wf(),
                 slog.wf(),
-                !is_synced ==> ticket@@.value.is_VersionUpperBound(),
-                !is_synced ==> ticket@@.value.get_VersionUpperBound_version_upper_bound()
+                !is_synced ==> ticket@.value().is_VersionUpperBound(),
+                !is_synced ==> ticket@.value().get_VersionUpperBound_version_upper_bound()
                     == version_upper_bound,
-                !is_synced ==> ticket@@.value.get_VersionUpperBound_op() == op,
-                is_synced ==> ticket@@.value.is_ReadyToRead(),
-                is_synced ==> ticket@@.value.get_ReadyToRead_node_id() == self.spec_id(),
-                is_synced ==> ticket@@.value.get_ReadyToRead_op() == op,
-                ticket@@.instance == self.unbounded_log_instance@,
-                ticket@@.key == rid,
+                !is_synced ==> ticket@.value().get_VersionUpperBound_op() == op,
+                is_synced ==> ticket@.value().is_ReadyToRead(),
+                is_synced ==> ticket@.value().get_ReadyToRead_node_id() == self.spec_id(),
+                is_synced ==> ticket@.value().get_ReadyToRead_op() == op,
+                ticket@.instance_id() == self.unbounded_log_instance@.id(),
+                ticket@.key() == rid,
                 slog.unbounded_log_instance@ == self.unbounded_log_instance@,
                 slog.cyclic_buffer_instance@ == self.cyclic_buffer_instance@,
         {
@@ -1129,10 +1126,10 @@ impl<DT: Dispatch> Replica<DT> {
             result.1.wf(self),
             result.1.batch_perm@@.pcell
                 == self.contexts[result.1.thread_id_spec() as int].batch.0.id(),
-            is_update_stub(result.2@, ticket@@.key, result.0, slog.unbounded_log_instance@),
+            is_update_stub(result.2@, ticket@.key(), result.0, slog.unbounded_log_instance@),
     {
         let tracked ticket = ticket.get();
-        let ghost req_id: nat = ticket@.key;
+        let ghost req_id: nat = ticket.key();
         let ThreadToken { rid, tid, fc_client, batch_perm } = tkn;
         // Step 1: Enqueue the operation onto the thread local batch
         // while !self.make_pending(op.clone(), idx.tid()) {}
@@ -1271,19 +1268,19 @@ pub tracked struct ReplicaConfig<DT: Dispatch> {
 
 impl<DT: Dispatch> ReplicaConfig<DT> {
     pub open spec fn wf(&self, nid: nat) -> bool {
-        &&& self.combiner@.instance == self.unbounded_log_instance
-        &&& self.cb_combiner@.instance == self.cyclic_buffer_instance
+        &&& self.combiner.instance_id() == self.unbounded_log_instance.id()
+        &&& self.cb_combiner.instance_id() == self.cyclic_buffer_instance.id()
         &&& self.cyclic_buffer_instance.unbounded_log_instance() == self.unbounded_log_instance
         &&& self.unbounded_log_instance.num_replicas() == self.cyclic_buffer_instance.num_replicas()
         &&& nid < self.unbounded_log_instance.num_replicas()
-        &&& self.replica@.value == DT::init_spec()
-        &&& self.replica@.key == nid
-        &&& self.replica@.instance == self.unbounded_log_instance
-        &&& self.combiner@.value.is_Ready()
-        &&& self.combiner@.key == nid
-        &&& self.cb_combiner@.key == nid
-        &&& self.cb_combiner@.value.is_Idle()
-        &&& self.cb_combiner@.instance == self.cyclic_buffer_instance
+        &&& self.replica.value() == DT::init_spec()
+        &&& self.replica.key() == nid
+        &&& self.replica.instance_id() == self.unbounded_log_instance.id()
+        &&& self.combiner.value().is_Ready()
+        &&& self.combiner.key() == nid
+        &&& self.cb_combiner.key() == nid
+        &&& self.cb_combiner.value().is_Idle()
+        &&& self.cb_combiner.instance_id() == self.cyclic_buffer_instance.id()
     }
 }
 
@@ -1315,9 +1312,9 @@ pub tracked struct CombinerLockStateGhost<DT: Dispatch> {
 // Note: this predicate only holds when the lock is not taken.
 pub open spec fn inv(&self, combiner_instance: FlatCombiner::Instance, responses_id: CellId, op_buffer_id: CellId, thread_ops: CellId) -> bool {
     predicate {
-        &&& self.flat_combiner@@.value.is_Collecting()
-        &&& self.flat_combiner@@.value.get_Collecting_0().len() == 0
-        &&& self.flat_combiner@@.instance == combiner_instance
+        &&& self.flat_combiner@.value().is_Collecting()
+        &&& self.flat_combiner@.value().get_Collecting_0().len() == 0
+        &&& self.flat_combiner@.instance_id() == combiner_instance.id()
 
         &&& self.collected_operations_perm@@.value.is_some()
         &&& self.collected_operations_perm@@.pcell == op_buffer_id
@@ -1348,19 +1345,19 @@ impl<DT: Dispatch> ThreadOpsData<DT> {
         num_ops_per_thread: Seq<usize>,
         replica_contexts: Seq<Context<DT>>,
     ) -> bool {
-        &&& self.flat_combiner@@.instance == flat_combiner_instance@
-        &&& self.flat_combiner@@.value.is_Responding()
-        &&& self.flat_combiner@@.value.get_Responding_0().len() as nat
+        &&& self.flat_combiner@.instance_id() == flat_combiner_instance@.id()
+        &&& self.flat_combiner@.value().is_Responding()
+        &&& self.flat_combiner@.value().get_Responding_0().len() as nat
             == MAX_THREADS_PER_REPLICA as nat
         &&& num_ops_per_thread.len() as nat == MAX_THREADS_PER_REPLICA as nat
-        &&& self.flat_combiner@@.value.get_Responding_1() == 0
+        &&& self.flat_combiner@.value().get_Responding_1() == 0
         &&& (forall|i: nat|
             #![trigger num_ops_per_thread[i as int]]
-            #![trigger self.flat_combiner@@.value.get_Responding_0()[i as int]]
-            i < self.flat_combiner@@.value.get_Responding_0().len() ==> {
+            #![trigger self.flat_combiner@.value().get_Responding_0()[i as int]]
+            i < self.flat_combiner@.value().get_Responding_0().len() ==> {
                 &&& (num_ops_per_thread[i as int] > 0)
-                    == self.flat_combiner@@.value.get_Responding_0()[i as int].is_some()
-                &&& self.flat_combiner@@.value.get_Responding_0()[i as int].is_some() ==> {
+                    == self.flat_combiner@.value().get_Responding_0()[i as int].is_some()
+                &&& self.flat_combiner@.value().get_Responding_0()[i as int].is_some() ==> {
                     &&& self.cell_permissions@.contains_key(i)
                     &&& self.cell_permissions@[i]@.pcell === replica_contexts[i as int].batch.0.id()
                     &&& self.cell_permissions@[i]@.value.is_some()
@@ -1383,16 +1380,16 @@ impl<DT: Dispatch> ThreadOpsData<DT> {
             #![trigger self.local_updates@[i]]
             i < self.request_ids@.len() ==> {
                 &&& self.local_updates@.contains_key(i)
-                &&& self.local_updates@[i]@.instance == unbounded_log_instance
-                &&& self.local_updates@[i]@.key == self.request_ids@[i as int]
-                &&& self.local_updates@[i]@.value.is_Done()
-                &&& self.local_updates@[i]@.value.get_Done_ret() == responses[i as int]
+                &&& self.local_updates@[i].instance_id() == unbounded_log_instance.id()
+                &&& self.local_updates@[i].key() == self.request_ids@[i as int]
+                &&& self.local_updates@[i].value().is_Done()
+                &&& self.local_updates@[i].value().get_Done_ret() == responses[i as int]
             })
         &&& rids_match(
-            self.flat_combiner@@.value.get_Responding_0(),
+            self.flat_combiner@.value().get_Responding_0(),
             self.request_ids@,
             0,
-            self.flat_combiner@@.value.get_Responding_0().len(),
+            self.flat_combiner@.value().get_Responding_0().len(),
             0,
             self.request_ids@.len(),
         )
@@ -1402,9 +1399,9 @@ impl<DT: Dispatch> ThreadOpsData<DT> {
         &self,
         flat_combiner_instance: Tracked<FlatCombiner::Instance>,
     ) -> bool {
-        &&& self.flat_combiner@@.instance == flat_combiner_instance@
-        &&& self.flat_combiner@@.value.is_Collecting()
-        &&& self.flat_combiner@@.value.get_Collecting_0().len() == 0
+        &&& self.flat_combiner@.instance_id() == flat_combiner_instance@.id()
+        &&& self.flat_combiner@.value().is_Collecting()
+        &&& self.flat_combiner@.value().get_Collecting_0().len() == 0
     }
 
     spec fn collect_thread_ops_post(
@@ -1422,16 +1419,16 @@ impl<DT: Dispatch> ThreadOpsData<DT> {
             #![trigger self.local_updates@[i]]
             i < self.request_ids@.len() ==> {
                 &&& #[trigger] self.local_updates@.contains_key(i)
-                &&& self.local_updates@[i]@.instance == unbounded_log_instance
-                &&& self.local_updates@[i]@.key == self.request_ids@[i as int]
-                &&& self.local_updates@[i]@.value.is_Init()
-                &&& self.local_updates@[i]@.value.get_Init_op() == operations[i as int]
+                &&& self.local_updates@[i].instance_id() == unbounded_log_instance.id()
+                &&& self.local_updates@[i].key() == self.request_ids@[i as int]
+                &&& self.local_updates@[i].value().is_Init()
+                &&& self.local_updates@[i].value().get_Init_op() == operations[i as int]
             })
         &&& rids_match(
-            self.flat_combiner@@.value.get_Responding_0(),
+            self.flat_combiner@.value().get_Responding_0(),
             self.request_ids@,
             0,
-            self.flat_combiner@@.value.get_Responding_0().len(),
+            self.flat_combiner@.value().get_Responding_0().len(),
             0,
             self.request_ids@.len(),
         )

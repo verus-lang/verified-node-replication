@@ -158,25 +158,25 @@ impl<DT: Dispatch + Sync> crate::NodeReplicatedT<DT> for NodeReplicated<DT> {
                     #![trigger replicas[i]]
                     idx <= i < num_replicas ==> {
                         &&& #[trigger] replicas.contains_key(i)
-                        &&& replicas[i]@.instance == unbounded_log_instance
-                        &&& replicas[i]@.key == i
-                        &&& replicas[i]@.value == DT::init_spec()
+                        &&& replicas[i].instance_id() == unbounded_log_instance.id()
+                        &&& replicas[i].key() == i
+                        &&& replicas[i].value() == DT::init_spec()
                     }),
                 (forall|i|
                     #![trigger combiners[i]]
                     idx <= i < num_replicas ==> {
                         &&& #[trigger] combiners.contains_key(i)
-                        &&& combiners[i]@.instance == unbounded_log_instance
-                        &&& combiners[i]@.key == i
-                        &&& combiners[i]@.value.is_Ready()
+                        &&& combiners[i].instance_id() == unbounded_log_instance.id()
+                        &&& combiners[i].key() == i
+                        &&& combiners[i].value().is_Ready()
                     }),
                 (forall|i|
                     #![trigger cb_combiners[i]]
                     idx <= i < num_replicas ==> {
                         &&& #[trigger] cb_combiners.contains_key(i)
-                        &&& cb_combiners[i]@.instance == cyclic_buffer_instance
-                        &&& cb_combiners[i]@.key == i
-                        &&& cb_combiners[i]@.value.is_Idle()
+                        &&& cb_combiners[i].instance_id() == cyclic_buffer_instance.id()
+                        &&& cb_combiners[i].key() == i
+                        &&& cb_combiners[i].value().is_Idle()
                     }),
         {
             let ghost mut idx_ghost;

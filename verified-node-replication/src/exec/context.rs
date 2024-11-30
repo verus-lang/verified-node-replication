@@ -54,20 +54,20 @@ pub struct ThreadToken<DT: Dispatch> {
 impl<DT: Dispatch> ThreadToken<DT> {
     pub open spec fn wf2(&self, num_replicas: nat) -> bool {
         &&& self.rid.wf(num_replicas)
-        &&& self.fc_client@@.value.is_Idle()
+        &&& self.fc_client@.value().is_Idle()
         &&& (self.tid as nat)
             < MAX_THREADS_PER_REPLICA
         // &&& self.fc_client@@.instance == fc_inst
 
         &&& self.batch_perm@@.value.is_None()
-        &&& self.fc_client@@.key == self.tid as nat
+        &&& self.fc_client@.key() == self.tid as nat
     }
 
     pub open spec fn wf(&self, replica: &Replica<DT>) -> bool {
         &&& self.wf2(replica.spec_id() + 1)  // +1 here because ids got < replicas
 
         &&& self.rid@ == replica.spec_id()
-        &&& self.fc_client@@.instance == replica.flat_combiner_instance
+        &&& self.fc_client@.instance_id() == replica.flat_combiner_instance@.id()
         &&& self.batch_perm@@.pcell == replica.contexts[self.thread_id_spec() as int].batch.0.id()
     }
 
@@ -185,9 +185,9 @@ impl<DT: Dispatch> Context<DT> {
         unbounded_log_instance: Tracked<UnboundedLog::Instance<DT>>,
     ) -> (res: (Context<DT>, Tracked<PointsTo<PendingOperation<DT>>>))
         requires
-            slot@@.value.is_Empty(),
-            slot@@.instance == flat_combiner_instance,
-            slot@@.key == thread_id as nat,
+            slot@.value().is_Empty(),
+            slot@.instance_id() == flat_combiner_instance@.id(),
+            slot@.key() == thread_id as nat,
         ensures
             res.0.wf(thread_id as nat),
             res.0.batch.0.id() == res.1@@.pcell,
@@ -268,8 +268,8 @@ impl<DT: Dispatch> Context<DT> {
             &self.atomic.0 => store(1);
             update prev->next;
             ghost g => {
-                let ghost tid = fc_clients.view().key;
-                let ghost rid = local_updates.view().key;
+                let ghost tid = fc_clients.key();
+                let ghost rid = local_updates.key();
 
                 self.flat_combiner_instance.borrow().pre_send_request(tid, &fc_clients, &g.slots);
                 send_request_result = self.flat_combiner_instance.borrow().send_request(tid, rid, fc_clients, g.slots);
@@ -325,8 +325,8 @@ impl<DT: Dispatch> Context<DT> {
                     batch_perms = g.batch_perms;
                     local_updates = g.update;
 
-                    let tid = fc_clients.view().key;
-                    let rid = fc_clients.view().value.get_Waiting_0();
+                    let tid = fc_clients.key();
+                    let rid = fc_clients.value().get_Waiting_0();
                     self.flat_combiner_instance.borrow().pre_recv_response(tid, &fc_clients, &g.slots);
                     recv_response_result = self.flat_combiner_instance.borrow().recv_response(tid, rid, fc_clients, g.slots);
                     fc_clients = recv_response_result.0.get();
@@ -436,46 +436,46 @@ pub tracked struct ContextGhost<DT: Dispatch> {
 //  - Dafny: predicate inv(v: uint64, i: nat, cell: Cell<OpResponse>, fc_loc_s: nat)
 pub open spec fn inv(&self, v: u64, tid: nat, cell: PCell<PendingOperation<DT>>, fc: FlatCombiner::Instance, inst: UnboundedLog::Instance<DT>) -> bool {
     predicate {
-        &&& self.slots@.key == tid
-        &&& self.slots@.instance == fc
+        &&& self.slots.key() == tid
+        &&& self.slots.instance_id() == fc.id()
 
         &&& ((v == 0) || (v == 1))
-        &&& (v == 0 ==> self.slots@.value.is_Empty() || self.slots@.value.is_Response())
-        &&& (v == 1 ==> self.slots@.value.is_Request() || self.slots@.value.is_InProgress())
+        &&& (v == 0 ==> self.slots.value().is_Empty() || self.slots.value().is_Response())
+        &&& (v == 1 ==> self.slots.value().is_Request() || self.slots.value().is_InProgress())
 
-        &&& (self.slots@.value.is_Empty() ==> {
+        &&& (self.slots.value().is_Empty() ==> {
             &&& self.update.is_None()
             &&& self.batch_perms.is_None()
         })
 
-        &&& (self.slots@.value.is_Request() ==> {
+        &&& (self.slots.value().is_Request() ==> {
             &&& self.update.is_Some()
-            &&& self.update.get_Some_0()@.value.is_Init()
-            &&& self.update.get_Some_0()@.key == self.slots@.value.get_ReqId()
-            &&& self.update.get_Some_0()@.instance == inst
+            &&& self.update.get_Some_0().value().is_Init()
+            &&& self.update.get_Some_0().key() == self.slots.value().get_ReqId()
+            &&& self.update.get_Some_0().instance_id() == inst.id()
 
             &&& self.batch_perms.is_Some()
             &&& self.batch_perms.get_Some_0()@.value.is_Some()
             &&& self.batch_perms.get_Some_0()@.pcell == cell.id()
-            &&& self.batch_perms.get_Some_0()@.value.get_Some_0().op == self.update.get_Some_0()@.value.get_Init_op()
+            &&& self.batch_perms.get_Some_0()@.value.get_Some_0().op == self.update.get_Some_0().value().get_Init_op()
         })
 
-        &&& (self.slots@.value.is_InProgress() ==> {
+        &&& (self.slots.value().is_InProgress() ==> {
             &&& self.update.is_None()
             &&& self.batch_perms.is_None()
         })
 
-        &&& (self.slots@.value.is_Response() ==> {
+        &&& (self.slots.value().is_Response() ==> {
             &&& self.update.is_Some()
-            &&& self.update.get_Some_0()@.value.is_Done()
-            &&& self.update.get_Some_0()@.key == self.slots@.value.get_ReqId()
-            &&& self.update.get_Some_0()@.instance == inst
+            &&& self.update.get_Some_0().value().is_Done()
+            &&& self.update.get_Some_0().key() == self.slots.value().get_ReqId()
+            &&& self.update.get_Some_0().instance_id() == inst.id()
 
             &&& self.batch_perms.is_Some()
             &&& self.batch_perms.get_Some_0()@.value.is_Some()
             &&& self.batch_perms.get_Some_0()@.pcell == cell.id()
             &&& self.batch_perms.get_Some_0()@.value.get_Some_0().resp.is_Some()
-            &&& self.batch_perms.get_Some_0()@.value.get_Some_0().resp.get_Some_0() == self.update.get_Some_0()@.value.get_Done_ret()
+            &&& self.batch_perms.get_Some_0()@.value.get_Some_0().resp.get_Some_0() == self.update.get_Some_0().value().get_Done_ret()
         })
     }
 }
@@ -500,26 +500,26 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
         inst: UnboundedLog::Instance<DT>,
     ) -> bool {
         &&& self.local_updates.is_Some()
-        &&& self.local_updates.get_Some_0()@.instance == inst
-        &&& self.local_updates.get_Some_0()@.value.is_Init()
-        &&& self.local_updates.get_Some_0()@.value.get_Init_op() == op
+        &&& self.local_updates.get_Some_0().instance_id() == inst.id()
+        &&& self.local_updates.get_Some_0().value().is_Init()
+        &&& self.local_updates.get_Some_0().value().get_Init_op() == op
         &&& self.batch_perms.is_Some()
         &&& self.batch_perms.get_Some_0()@.pcell == self.cell_id
         &&& self.cell_id == batch_cell
         &&& self.batch_perms.get_Some_0()@.value.is_None()
-        &&& self.fc_clients@.instance == fc_inst
-        &&& self.fc_clients@.key == tid
-        &&& self.fc_clients@.value.is_Idle()
+        &&& self.fc_clients.instance_id() == fc_inst.id()
+        &&& self.fc_clients.key() == tid
+        &&& self.fc_clients.value().is_Idle()
     }
 
     pub open spec fn enqueue_op_post(&self, pre: FCClientRequestResponseGhost<DT>) -> bool
         recommends
             pre.local_updates.is_Some(),
     {
-        &&& self.fc_clients@.value.is_Waiting()
-        &&& self.fc_clients@.value.get_Waiting_0() == pre.local_updates.get_Some_0()@.key
-        &&& self.fc_clients@.instance == pre.fc_clients@.instance
-        &&& self.fc_clients@.key == pre.fc_clients@.key
+        &&& self.fc_clients.value().is_Waiting()
+        &&& self.fc_clients.value().get_Waiting_0() == pre.local_updates.get_Some_0().key()
+        &&& self.fc_clients.instance_id() == pre.fc_clients.instance_id()
+        &&& self.fc_clients.key() == pre.fc_clients.key()
         &&& self.cell_id == pre.cell_id
         &&& self.batch_perms.is_None()
         &&& self.local_updates.is_None()
@@ -531,9 +531,9 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
         tid: nat,
         fc_inst: FlatCombiner::Instance,
     ) -> bool {
-        &&& self.fc_clients@.key == tid
-        &&& self.fc_clients@.instance == fc_inst
-        &&& self.fc_clients@.value.is_Waiting()
+        &&& self.fc_clients.key() == tid
+        &&& self.fc_clients.instance_id() == fc_inst.id()
+        &&& self.fc_clients.value().is_Waiting()
         &&& self.batch_perms.is_None()
         &&& self.local_updates.is_None()
         &&& self.cell_id == batch_cell
@@ -551,13 +551,13 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
             &&& self.batch_perms.get_Some_0()@.value.is_None()
             &&& self.batch_perms.get_Some_0()@.pcell == self.cell_id
             &&& self.local_updates.is_Some()
-            &&& self.local_updates.get_Some_0()@.instance == inst
-            &&& self.local_updates.get_Some_0()@.value.is_Done()
-            &&& self.local_updates.get_Some_0()@.key == pre.fc_clients@.value.get_Waiting_0()
-            &&& self.local_updates.get_Some_0()@.value.get_Done_ret() == ret.get_Some_0()
-            &&& self.fc_clients@.instance == pre.fc_clients@.instance
-            &&& self.fc_clients@.key == pre.fc_clients@.key
-            &&& self.fc_clients@.value.is_Idle()
+            &&& self.local_updates.get_Some_0().instance_id() == inst.id()
+            &&& self.local_updates.get_Some_0().value().is_Done()
+            &&& self.local_updates.get_Some_0().key() == pre.fc_clients.value().get_Waiting_0()
+            &&& self.local_updates.get_Some_0().value().get_Done_ret() == ret.get_Some_0()
+            &&& self.fc_clients.instance_id() == pre.fc_clients.instance_id()
+            &&& self.fc_clients.key() == pre.fc_clients.key()
+            &&& self.fc_clients.value().is_Idle()
         }
         &&& ret.is_None() ==> {
             &&& self == pre

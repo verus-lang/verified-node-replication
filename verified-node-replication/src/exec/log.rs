@@ -84,9 +84,9 @@ pub open spec fn wf(&self, idx: nat, cb_inst: CyclicBuffer::Instance<DT>) -> boo
         &&& self.cyclic_buffer_idx == idx
     }
     invariant on alive with (cyclic_buffer_idx, cyclic_buffer_instance) is (v: bool, g: CyclicBuffer::alive_bits<DT>) {
-        &&& g@.instance == cyclic_buffer_instance@
-        &&& g@.key == cyclic_buffer_idx@
-        &&& g@.value === v
+        &&& g.instance_id() == cyclic_buffer_instance@.id()
+        &&& g.key() == cyclic_buffer_idx@
+        &&& g.value() === v
     }
 }
 }  // struct_with_invariants
@@ -169,22 +169,22 @@ pub open spec fn wf(&self) -> bool {
     }
 
     invariant on version_upper_bound with (unbounded_log_instance) specifically (self.version_upper_bound.0) is (v: u64, g: UnboundedLog::version_upper_bound<DT>) {
-        &&& g@.instance == unbounded_log_instance@
-        &&& g@.value == v
+        &&& g.instance_id() == unbounded_log_instance@.id()
+        &&& g.value() == v
         &&& 0 <= v <= MAX_IDX
     }
 
     invariant on head with (cyclic_buffer_instance) specifically (self.head.0) is (v: u64, g: CyclicBuffer::head<DT>) {
-        &&& g@.instance == cyclic_buffer_instance@
-        &&& g@.value == v
+        &&& g.instance_id() == cyclic_buffer_instance@.id()
+        &&& g.value() == v
         &&& 0 <= v <= MAX_IDX
     }
 
     invariant on tail with (cyclic_buffer_instance, unbounded_log_instance) specifically (self.tail.0) is (v: u64, g: (UnboundedLog::tail<DT>, CyclicBuffer::tail<DT>)) {
-        &&& g.0@.instance == unbounded_log_instance@
-        &&& g.0@.value == v
-        &&& g.1@.instance == cyclic_buffer_instance@
-        &&& g.1@.value == v
+        &&& g.0.instance_id() == unbounded_log_instance@.id()
+        &&& g.0.value() == v
+        &&& g.1.instance_id() == cyclic_buffer_instance@.id()
+        &&& g.1.value() == v
         &&& 0 <= v <= MAX_IDX
     }
 
@@ -194,12 +194,12 @@ pub open spec fn wf(&self) -> bool {
         specifically (self.local_versions@[i].0)
         is (v: u64, g: (UnboundedLog::local_versions<DT>, CyclicBuffer::local_versions<DT>)) {
 
-        &&& g.0@.instance == unbounded_log_instance@
-        &&& g.0@.key == i
-        &&& g.0@.value == v
-        &&& g.1@.instance == cyclic_buffer_instance@
-        &&& g.1@.key == i
-        &&& g.1@.value == v
+        &&& g.0.instance_id() == unbounded_log_instance@.id()
+        &&& g.0.key() == i
+        &&& g.0.value() == v
+        &&& g.1.instance_id() == cyclic_buffer_instance@.id()
+        &&& g.1.key() == i
+        &&& g.1.value() == v
         &&& 0 <= v <= MAX_IDX
     }
 }
@@ -228,7 +228,6 @@ impl<DT: Dispatch> NrLog<DT> {
         // initialize the unbounded log state machine to obtain the tokens
         //
         let tracked unbounded_log_instance: UnboundedLog::Instance<DT>;
-        let tracked ul_log: Map<LogIdx, UnboundedLog::log<DT>>;
         let tracked ul_tail: UnboundedLog::tail<DT>;
         let tracked ul_replicas: Map<NodeId, UnboundedLog::replicas<DT>>;
         let tracked mut ul_local_versions: Map<NodeId, UnboundedLog::local_versions<DT>>;
@@ -247,12 +246,11 @@ impl<DT: Dispatch> NrLog<DT> {
                 Tracked(ul_combiner0),  //Tracked<Map<NodeId,combiner>>
             ) = UnboundedLog::Instance::initialize(num_replicas as nat);
             unbounded_log_instance = unbounded_log_instance0;
-            ul_log = ul_log0;
             ul_tail = ul_tail0;
-            ul_replicas = ul_replicas0;
-            ul_local_versions = ul_local_versions0;
+            ul_replicas = ul_replicas0.into_map();
+            ul_local_versions = ul_local_versions0.into_map();
             ul_version_upper_bound = ul_version_upper_bound0;
-            ul_combiner = ul_combiner0;
+            ul_combiner = ul_combiner0.into_map();
         }
         //
         // initialize the log cells
@@ -339,9 +337,9 @@ impl<DT: Dispatch> NrLog<DT> {
             cyclic_buffer_instance = cyclic_buffer_instance0;
             cb_head = cb_head0;
             cb_tail = cb_tail0;
-            cb_local_versions = cb_local_versions0;
-            cb_alive_bits = cb_alive_bits0;
-            cb_combiners = cb_combiner0;
+            cb_local_versions = cb_local_versions0.into_map();
+            cb_alive_bits = cb_alive_bits0.into_map();
+            cb_combiners = cb_combiner0.into_map();
         }
         //
         // build up the actual log
@@ -364,9 +362,9 @@ impl<DT: Dispatch> NrLog<DT> {
                 forall|i|
                     #![trigger cb_alive_bits[i]]
                     log_idx <= i < log_size ==> {
-                        &&& cb_alive_bits[i]@.key == i
-                        &&& cb_alive_bits[i]@.value == false
-                        &&& cb_alive_bits[i]@.instance == cyclic_buffer_instance
+                        &&& cb_alive_bits[i].key() == i
+                        &&& cb_alive_bits[i].value() == false
+                        &&& cb_alive_bits[i].instance_id() == cyclic_buffer_instance.id()
                     },
                 forall|i| 0 <= i < log_idx ==> slog_entries.spec_index(i).is_None(),
                 forall|i|
@@ -428,16 +426,16 @@ impl<DT: Dispatch> NrLog<DT> {
                 forall|i|
                     #![trigger cb_local_versions[i]]
                     nid <= i < num_replicas ==> {
-                        &&& cb_local_versions[i]@.instance == cyclic_buffer_instance
-                        &&& cb_local_versions[i]@.key == i
-                        &&& cb_local_versions[i]@.value == 0
+                        &&& cb_local_versions[i].instance_id() == cyclic_buffer_instance.id()
+                        &&& cb_local_versions[i].key() == i
+                        &&& cb_local_versions[i].value() == 0
                     },
                 forall|i|
                     #![trigger ul_local_versions[i]]
                     nid <= i < num_replicas ==> {
-                        &&& ul_local_versions[i]@.instance == unbounded_log_instance
-                        &&& ul_local_versions[i]@.key == i
-                        &&& ul_local_versions[i]@.value == 0
+                        &&& ul_local_versions[i].instance_id() == unbounded_log_instance.id()
+                        &&& ul_local_versions[i].key() == i
+                        &&& ul_local_versions[i].value() == 0
                     },
                 forall|i: int|
                     #![trigger local_versions[i]]
@@ -561,17 +559,17 @@ impl<DT: Dispatch> NrLog<DT> {
     ) -> (ret: (u64, Tracked<UnboundedLog::local_reads<DT>>))
         requires
             self.wf(),
-            local_reads@@.instance == self.unbounded_log_instance@,
-            local_reads@@.value.is_Init(),
+            local_reads@.instance_id() == self.unbounded_log_instance@.id(),
+            local_reads@.value().is_Init(),
         ensures
-            ret.1@@.value.is_VersionUpperBound(),
-            ret.1@@.value.get_VersionUpperBound_version_upper_bound() == ret.0 as nat,
-            ret.1@@.value.get_VersionUpperBound_op() == local_reads@@.value.get_Init_op(),
-            ret.1@@.instance == self.unbounded_log_instance@,
-            ret.1@@.key == local_reads@@.key,
+            ret.1@.value().is_VersionUpperBound(),
+            ret.1@.value().get_VersionUpperBound_version_upper_bound() == ret.0 as nat,
+            ret.1@.value().get_VersionUpperBound_op() == local_reads@.value().get_Init_op(),
+            ret.1@.instance_id() == self.unbounded_log_instance@.id(),
+            ret.1@.key() == local_reads@.key(),
     {
         let tracked local_reads = local_reads.get();
-        let ghost rid = local_reads@.key;
+        let ghost rid = local_reads.key();
         let tracked new_local_reads_g: UnboundedLog::local_reads<DT>;
         let res =
             atomic_with_ghost!(
@@ -599,20 +597,20 @@ impl<DT: Dispatch> NrLog<DT> {
         requires
             self.wf(),
             node_id < self.local_versions.len(),
-            local_reads@@.instance == self.unbounded_log_instance@,
-            local_reads@@.value.is_VersionUpperBound(),
-            local_reads@@.value.get_VersionUpperBound_version_upper_bound() == version_upper_bound,
+            local_reads@.instance_id() == self.unbounded_log_instance@.id(),
+            local_reads@.value().is_VersionUpperBound(),
+            local_reads@.value().get_VersionUpperBound_version_upper_bound() == version_upper_bound,
         ensures
-            result.0 ==> result.1@@.value.is_ReadyToRead(),
-            result.0 ==> result.1@@.value.get_ReadyToRead_node_id() == node_id,
-            result.0 ==> result.1@@.value.get_ReadyToRead_op()
-                == local_reads@@.value.get_VersionUpperBound_op(),
+            result.0 ==> result.1@.value().is_ReadyToRead(),
+            result.0 ==> result.1@.value().get_ReadyToRead_node_id() == node_id,
+            result.0 ==> result.1@.value().get_ReadyToRead_op()
+                == local_reads@.value().get_VersionUpperBound_op(),
             !result.0 ==> result.1 == local_reads,
-            result.1@@.instance == self.unbounded_log_instance@,
-            result.1@@.key == local_reads@@.key,
+            result.1@.instance_id() == self.unbounded_log_instance@.id(),
+            result.1@.key() == local_reads@.key(),
     {
         // obtain the request id from the local_reads token
-        let rid_g: Ghost<ReqId> = Ghost(local_reads@@.key);
+        let rid_g: Ghost<ReqId> = Ghost(local_reads@.key());
         let tracked new_local_reads_g: UnboundedLog::local_reads<DT>;
         // obtain the local version
         let local_version = &self.local_versions[node_id as usize].0;
@@ -742,7 +740,7 @@ impl<DT: Dispatch> NrLog<DT> {
                 nid == replica_token@,
                 nops == operations.len(),
                 nops <= MAX_REQUESTS,
-                ghost_data_new.cb_combiner@@.value == ghost_data@.cb_combiner@@.value,
+                ghost_data_new.cb_combiner@.value() == ghost_data@.cb_combiner@.value(),
                 ghost_data_new.request_ids@ == ghost_data@.request_ids@,
                 ghost_data_new.append_pre(
                     replica_token@,
@@ -892,9 +890,9 @@ impl<DT: Dispatch> NrLog<DT> {
                             combiner = append_entries_ghost_state.combiner;
                             unbounded_tail = append_entries_ghost_state.tail;
                             local_updates = append_entries_ghost_state.local_updates;
-                            assert(combiner@.value.get_Placed_queued_ops() =~= request_ids@);
+                            assert(combiner.value().get_Placed_queued_ops() =~= request_ids@);
                         } else {
-                            assert(combiner@.value.get_Placed_queued_ops() =~= request_ids@);
+                            assert(combiner.value().get_Placed_queued_ops() =~= request_ids@);
                         }
 
                         g = (unbounded_tail, cb_tail);
@@ -934,26 +932,26 @@ impl<DT: Dispatch> NrLog<DT> {
                     buffer_size == LOG_SIZE,
                     cell_ids == self.cyclic_buffer_instance@.cell_ids(),
                     cell_ids.len() == buffer_size,
-                    cb_combiner@.key == nid,
-                    cb_combiner@.value.is_Appending(),
-                    cb_combiner@.value.get_Appending_cur_idx() == tail + idx,
-                    cb_combiner@.value.get_Appending_tail() == new_tail,
-                    cb_combiner@.value.get_Appending_cur_idx()
-                        <= cb_combiner@.value.get_Appending_tail(),
-                    cb_combiner@.instance == self.cyclic_buffer_instance@,
+                    cb_combiner.key() == nid,
+                    cb_combiner.value().is_Appending(),
+                    cb_combiner.value().get_Appending_cur_idx() == tail + idx,
+                    cb_combiner.value().get_Appending_tail() == new_tail,
+                    cb_combiner.value().get_Appending_cur_idx()
+                        <= cb_combiner.value().get_Appending_tail(),
+                    cb_combiner.instance_id() == self.cyclic_buffer_instance@.id(),
                     forall|i|
                         #![trigger log_entries[i]]
                         idx <= i < request_ids@.len() ==> {
                             &&& (#[trigger] log_entries.contains_key(i))
-                            &&& log_entries[i]@.key == tail + i
-                            &&& log_entries[i]@.instance == self.unbounded_log_instance@
-                            &&& log_entries[i]@.value.node_id
+                            &&& log_entries[i].key() == tail + i
+                            &&& log_entries[i].instance_id() == self.unbounded_log_instance@.id()
+                            &&& log_entries[i].value().node_id
                                 == nid as nat
                             //
                             // The following will result in a resource limit exceeded
                             //
 
-                            &&& log_entries[i]@.value.op
+                            &&& log_entries[i].value().op
                                 == operations[i as int]
                             //
                             // Adding the `&` below will fix this.
@@ -1015,10 +1013,10 @@ impl<DT: Dispatch> NrLog<DT> {
                 #![trigger log_entries[i]]
                 idx <= i < request_ids@.len() ==> {
                     &&& #[trigger] log_entries.contains_key(i)
-                    &&& log_entries[i]@.key == tail + i
-                    &&& log_entries[i]@.instance == self.unbounded_log_instance@
-                    &&& log_entries[i]@.value.node_id == nid as nat
-                    &&& log_entries[i]@.value.op == operations[i as int]
+                    &&& log_entries[i].key() == tail + i
+                    &&& log_entries[i].instance_id() == self.unbounded_log_instance@.id()
+                    &&& log_entries[i].value().node_id == nid as nat
+                    &&& log_entries[i].value().op == operations[i as int]
                 });
             assert(forall|i|
                 (tail + idx) - LOG_SIZE <= i < new_tail - LOG_SIZE <==> cb_log_entries.contains_key(
@@ -1096,8 +1094,8 @@ impl<DT: Dispatch> NrLog<DT> {
             invariant
                 self.wf(),
                 replica_token.wf(self.num_replicas@),
-                ghost_data_new@.cb_combiner@@.value.is_Idle(),
-                ghost_data_new@.combiner@@.value.is_Placed() ==> ghost_data_new@.pre_exec(
+                ghost_data_new@.cb_combiner@.value().is_Idle(),
+                ghost_data_new@.combiner@.value().is_Placed() ==> ghost_data_new@.pre_exec(
                     responses@,
                 ),
                 ghost_data_new@.advance_head_post(
@@ -1210,25 +1208,25 @@ impl<DT: Dispatch> NrLog<DT> {
     ) -> (tracked res: Map<nat, UnboundedLog::local_updates<DT>>)
         requires
             self.wf(),
-            version_upper_bound@.instance == self.unbounded_log_instance@,
+            version_upper_bound.instance_id() == self.unbounded_log_instance@.id(),
             forall|i|
                 #![trigger local_updates[i]]
                 0 <= i < request_ids.len() ==> {
                     &&& #[trigger] local_updates.contains_key(i)
-                    &&& local_updates[i]@.key == request_ids[i as int]
-                    &&& local_updates[i]@.instance == self.unbounded_log_instance@
-                    &&& local_updates[i]@.value.is_Applied()
-                    &&& local_updates[i]@.value.get_Applied_idx() < version_upper_bound@.value
+                    &&& local_updates[i].key() == request_ids[i as int]
+                    &&& local_updates[i].instance_id() == self.unbounded_log_instance@.id()
+                    &&& local_updates[i].value().is_Applied()
+                    &&& local_updates[i].value().get_Applied_idx() < version_upper_bound.value()
                 },
         ensures
             forall|i|
                 #![trigger res[i]]
                 0 <= i < request_ids.len() ==> {
                     &&& #[trigger] res.contains_key(i)
-                    &&& res[i]@.key == request_ids[i as int]
-                    &&& res[i]@.instance == self.unbounded_log_instance@
-                    &&& res[i]@.value.is_Done()
-                    &&& res[i]@.value.get_Done_ret() == local_updates[i]@.value.get_Applied_ret()
+                    &&& res[i].key() == request_ids[i as int]
+                    &&& res[i].instance_id() == self.unbounded_log_instance@.id()
+                    &&& res[i].value().is_Done()
+                    &&& res[i].value().get_Done_ret() == local_updates[i].value().get_Applied_ret()
                 },
         decreases request_ids.len(),
     {
@@ -1296,7 +1294,7 @@ impl<DT: Dispatch> NrLog<DT> {
         let ghost mut request_ids_new = request_ids;
         proof {
             // if the combiner in idle, we start it with the trival start transition
-            if combiner@.value.is_Ready() {
+            if combiner.value().is_Ready() {
                 combiner =
                 self.unbounded_log_instance.borrow().exec_trivial_start(nid as nat, combiner);
                 request_ids_new = Seq::empty();
@@ -1346,7 +1344,7 @@ impl<DT: Dispatch> NrLog<DT> {
                 self.unbounded_log_instance@,
                 self.cyclic_buffer_instance@,
             ));
-            // assert(ghost_data_ret.cb_combiner@@.value  == ghost_data.cb_combiner@@.value);
+            // assert(ghost_data_ret.cb_combiner@.value()  == ghost_data.cb_combiner@.value());
             // assert(ghost_data_ret.request_ids == ghost_data.request_ids);
             // assert(ghost_data.combiner@@.value.is_Placed() ==> {
             //     &&& ghost_data_ret.post_exec(ghost_data.request_ids@, responses@)
@@ -1370,53 +1368,53 @@ impl<DT: Dispatch> NrLog<DT> {
         while local_version < global_tail
             invariant
                 self.wf(),
-                ghost_data.combiner@@.value.is_Placed() ==> {
-                    &&& ghost_data.combiner@@.value.get_Placed_queued_ops() == request_ids
-                    &&& combiner@.value.get_Loop_queued_ops() == request_ids
+                ghost_data.combiner@.value().is_Placed() ==> {
+                    &&& ghost_data.combiner@.value().get_Placed_queued_ops() == request_ids
+                    &&& combiner.value().get_Loop_queued_ops() == request_ids
                 },
-                ghost_data.combiner@@.value.is_Ready() ==> combiner@.value.get_Loop_queued_ops()
+                ghost_data.combiner@.value().is_Ready() ==> combiner.value().get_Loop_queued_ops()
                     == Seq::<ReqId>::empty(),
-                combiner@.value.queued_ops() == request_ids_new,
+                combiner.value().queued_ops() == request_ids_new,
                 0 <= local_version <= global_tail,
                 0 <= responses_idx as nat <= request_ids_new.len(),
                 responses_idx == 0 ==> responses@ == responses_old && local_updates
                     == local_updates_old,
-                ghost_data.combiner@@.value.is_Placed() ==> responses.len() == responses_idx,
+                ghost_data.combiner@.value().is_Placed() ==> responses.len() == responses_idx,
                 request_ids_new.len() <= MAX_REQUESTS,
-                ghost_replica@.instance == self.unbounded_log_instance@,
-                ghost_replica@.key == nid as nat,
-                ghost_replica@.value == actual_replica.view(),
-                cb_combiner@.key == nid as nat,
-                cb_combiner@.instance == self.cyclic_buffer_instance@,
-                cb_combiner@.value.is_Reading(),
-                cb_combiner@.value.get_Reading_0().is_Range(),
-                cb_combiner@.value.get_Reading_0().get_Range_cur() == local_version,
-                cb_combiner@.value.get_Reading_0().get_Range_end() == global_tail,
-                combiner@.key == nid as nat,
-                combiner@.instance == self.unbounded_log_instance@,
-                combiner@.value.is_Loop(),
-                combiner@.value.get_Loop_queued_ops() == request_ids_new,
-                combiner@.value.get_Loop_lversion() == local_version,
-                combiner@.value.get_Loop_tail() == global_tail,
-                combiner@.value.get_Loop_idx() == responses_idx,
+                ghost_replica.instance_id() == self.unbounded_log_instance@.id(),
+                ghost_replica.key() == nid as nat,
+                ghost_replica.value() == actual_replica.view(),
+                cb_combiner.key() == nid as nat,
+                cb_combiner.instance_id() == self.cyclic_buffer_instance@.id(),
+                cb_combiner.value().is_Reading(),
+                cb_combiner.value().get_Reading_0().is_Range(),
+                cb_combiner.value().get_Reading_0().get_Range_cur() == local_version,
+                cb_combiner.value().get_Reading_0().get_Range_end() == global_tail,
+                combiner.key() == nid as nat,
+                combiner.instance_id() == self.unbounded_log_instance@.id(),
+                combiner.value().is_Loop(),
+                combiner.value().get_Loop_queued_ops() == request_ids_new,
+                combiner.value().get_Loop_lversion() == local_version,
+                combiner.value().get_Loop_tail() == global_tail,
+                combiner.value().get_Loop_idx() == responses_idx,
                 forall|i|
                     #![trigger local_updates[i]]
                     responses_idx <= i < request_ids_new.len() ==> {
                         &&& #[trigger ] local_updates.contains_key(i)
-                        &&& local_updates[i]@.key == request_ids_new[i as int]
-                        &&& local_updates[i]@.value.is_Placed()
-                        &&& local_updates[i]@.instance == self.unbounded_log_instance@
+                        &&& local_updates[i].key() == request_ids_new[i as int]
+                        &&& local_updates[i].value().is_Placed()
+                        &&& local_updates[i].instance_id() == self.unbounded_log_instance@.id()
                     },
-                ghost_data.combiner@@.value.is_Placed() ==> forall|i|
+                ghost_data.combiner@.value().is_Placed() ==> forall|i|
                     #![trigger local_updates[i]]
                     0 <= i < responses_idx ==> {
                         &&& #[trigger] local_updates.contains_key(i)
-                        &&& local_updates[i]@.key == request_ids_new[i as int]
-                        &&& local_updates[i]@.instance == self.unbounded_log_instance@
-                        &&& local_updates[i]@.value.is_Applied()
-                        &&& local_updates[i]@.value.get_Applied_ret() == responses[i as int]
-                        &&& local_updates[i]@.value.get_Applied_idx()
-                            < combiner@.value.get_Loop_tail()
+                        &&& local_updates[i].key() == request_ids_new[i as int]
+                        &&& local_updates[i].instance_id() == self.unbounded_log_instance@.id()
+                        &&& local_updates[i].value().is_Applied()
+                        &&& local_updates[i].value().get_Applied_ret() == responses[i as int]
+                        &&& local_updates[i].value().get_Applied_idx()
+                            < combiner.value().get_Loop_tail()
                     },
         {
             // calculating the actual index and the
@@ -1433,17 +1431,17 @@ impl<DT: Dispatch> NrLog<DT> {
                     phys_log_idx as nat == self.index_spec(local_version as nat),
                     is_alive_value == self.is_alive_value_spec(local_version as int),
                     0 <= iteration <= WARN_THRESHOLD,
-                    cb_combiner@.instance == self.cyclic_buffer_instance@,
-                    cb_combiner@.key == nid as nat,
-                    cb_combiner@.value.is_Reading(),
-                    !is_alive ==> cb_combiner@.value.get_Reading_0().is_Range(),
-                    !is_alive ==> cb_combiner@.value.get_Reading_0().get_Range_cur()
+                    cb_combiner.instance_id() == self.cyclic_buffer_instance@.id(),
+                    cb_combiner.key() == nid as nat,
+                    cb_combiner.value().is_Reading(),
+                    !is_alive ==> cb_combiner.value().get_Reading_0().is_Range(),
+                    !is_alive ==> cb_combiner.value().get_Reading_0().get_Range_cur()
                         == local_version,
-                    !is_alive ==> cb_combiner@.value.get_Reading_0().get_Range_end() == global_tail,
-                    is_alive ==> cb_combiner@.value.get_Reading_0().is_Guard(),
-                    is_alive ==> cb_combiner@.value.get_Reading_0().get_Guard_cur()
+                    !is_alive ==> cb_combiner.value().get_Reading_0().get_Range_end() == global_tail,
+                    is_alive ==> cb_combiner.value().get_Reading_0().is_Guard(),
+                    is_alive ==> cb_combiner.value().get_Reading_0().get_Guard_cur()
                         == local_version,
-                    is_alive ==> cb_combiner@.value.get_Reading_0().get_Guard_end() == global_tail,
+                    is_alive ==> cb_combiner.value().get_Reading_0().get_Guard_end() == global_tail,
                     self.slog.spec_index(phys_log_idx as int).wf(
                         phys_log_idx as nat,
                         self.cyclic_buffer_instance@,
@@ -1520,9 +1518,9 @@ impl<DT: Dispatch> NrLog<DT> {
             } else {
                 // case: remote dispatch
                 proof {
-                    assert(stored_entry.log_entry.get_Some_0().view().value.node_id != nid);
+                    assert(stored_entry.log_entry.get_Some_0().value().node_id != nid);
                     if let Option::Some(e) = &stored_entry.log_entry {
-                        assert(e.view().value.node_id != nid);
+                        assert(e.value().node_id != nid);
                         // assert(ghost_replica@.key == nid as nat);
                         // assert(combiner@.value.get_Loop_lversion() < combiner@.value.get_Loop_tail());
                         let tracked exec_dispatch_remote_result =
@@ -1558,7 +1556,7 @@ impl<DT: Dispatch> NrLog<DT> {
             ghost g => {
                 combiner = self.unbounded_log_instance.borrow().exec_update_version_upper_bound(nid as nat, &mut g, combiner);
 
-                if ghost_data.combiner@@.value.is_Placed() {
+                if ghost_data.combiner@.value().is_Placed() {
                     local_updates = self.execute_update_done_multiple(request_ids_new,  local_updates, &g);
                 }
             });
@@ -1609,20 +1607,20 @@ impl<DT: Dispatch> NrLog<DT> {
     ) -> (result: (u64, Tracked<CyclicBuffer::combiner<DT>>))
         requires
             self.wf(),
-            cb_combiner@@.instance == self.cyclic_buffer_instance@,
-            cb_combiner@@.value.is_Idle(),
+            cb_combiner@.instance_id() == self.cyclic_buffer_instance@.id(),
+            cb_combiner@.value().is_Idle(),
         ensures
             result.0 <= MAX_IDX,
-            result.1@@.key == cb_combiner@@.key,
-            result.1@@.value.is_AdvancingHead(),
-            result.1@@.instance == self.cyclic_buffer_instance@,
-            result.1@@.value.get_AdvancingHead_idx() == self.num_replicas,
-            result.1@@.value.get_AdvancingHead_min_local_version() == result.0,
+            result.1@.key() == cb_combiner@.key(),
+            result.1@.value().is_AdvancingHead(),
+            result.1@.instance_id() == self.cyclic_buffer_instance@.id(),
+            result.1@.value().get_AdvancingHead_idx() == self.num_replicas,
+            result.1@.value().get_AdvancingHead_min_local_version() == result.0,
     {
         // let r = self.next.load(Ordering::Relaxed);
         let num_replicas = self.local_versions.len();
         let tracked mut g_cb_comb_new: CyclicBuffer::combiner<DT> = cb_combiner.get();
-        let ghost g_node_id = cb_combiner@@.key;
+        let ghost g_node_id = cb_combiner@.key();
         // let (mut min_replica_idx, mut min_local_tail) = (0, self.ltails[0].load(Ordering::Relaxed));
         let mut min_local_version =
             atomic_with_ghost!(
@@ -1643,11 +1641,11 @@ impl<DT: Dispatch> NrLog<DT> {
                 self.wf(),
                 0 <= idx <= num_replicas,
                 min_local_version <= MAX_IDX,
-                g_cb_comb_new@.instance == self.cyclic_buffer_instance,
-                g_cb_comb_new@.value.is_AdvancingHead(),
-                g_cb_comb_new@.value.get_AdvancingHead_idx() == idx,
-                g_cb_comb_new@.value.get_AdvancingHead_min_local_version() == min_local_version,
-                g_cb_comb_new.view().key == g_node_id,
+                g_cb_comb_new.instance_id() == self.cyclic_buffer_instance@.id(),
+                g_cb_comb_new.value().is_AdvancingHead(),
+                g_cb_comb_new.value().get_AdvancingHead_idx() == idx,
+                g_cb_comb_new.value().get_AdvancingHead_min_local_version() == min_local_version,
+                g_cb_comb_new.key() == g_node_id,
                 num_replicas == self.local_versions.len(),
         {
             // let cur_local_tail = self.ltails[idx - 1].load(Ordering::Relaxed);
@@ -1697,15 +1695,15 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
         &&& (forall|i|
             0 <= i < self.request_ids@.len() ==> {
                 &&& (#[trigger] self.local_updates@.contains_key(i))
-                &&& self.local_updates@[i]@.instance == inst
+                &&& self.local_updates@[i].instance_id() == inst.id()
             })
-        &&& self.ghost_replica@@.key == nid
-        &&& self.ghost_replica@@.instance == inst
-        &&& self.ghost_replica@@.value == data
-        &&& self.combiner@@.key == nid
-        &&& self.combiner@@.instance == inst
-        &&& self.cb_combiner@@.key == nid
-        &&& self.cb_combiner@@.instance == cb_inst
+        &&& self.ghost_replica@.key() == nid
+        &&& self.ghost_replica@.instance_id() == inst.id()
+        &&& self.ghost_replica@.value() == data
+        &&& self.combiner@.key() == nid
+        &&& self.combiner@.instance_id() == inst.id()
+        &&& self.cb_combiner@.key() == nid
+        &&& self.cb_combiner@.instance_id() == cb_inst.id()
         &&& self.request_ids@.len() <= MAX_REQUESTS
     }
 
@@ -1722,12 +1720,12 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
             #![trigger self.local_updates@[i]]
             0 <= i < self.request_ids@.len() ==> {
                 &&& #[trigger] self.local_updates@.contains_key(i)
-                &&& self.local_updates@[i]@.key == self.request_ids@[i as int]
-                &&& self.local_updates@[i]@.value.is_Init()
-                &&& self.local_updates@[i]@.value.get_Init_op() == ops[i as int]
+                &&& self.local_updates@[i].key() == self.request_ids@[i as int]
+                &&& self.local_updates@[i].value().is_Init()
+                &&& self.local_updates@[i].value().get_Init_op() == ops[i as int]
             })
-        &&& self.combiner@@.value.is_Ready()
-        &&& self.cb_combiner@@.value.is_Idle()
+        &&& self.combiner@.value().is_Ready()
+        &&& self.cb_combiner@.value().is_Idle()
         &&& self.request_ids@.len() == ops.len()
     }
 
@@ -1742,11 +1740,11 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
         cb_inst: CyclicBuffer::Instance<DT>,
     ) -> bool {
         &&& self.common_pred(nid, data, inst, cb_inst)
-        &&& self.combiner@@.value.is_Ready() || self.combiner@@.value.is_Placed()
-        &&& self.combiner@@.value.is_Ready() ==> self.post_exec(pre.request_ids@, responses)
-        &&& self.combiner@@.value.is_Placed() ==> self.pre_exec(responses)
-        &&& self.cb_combiner@@.value
-            == pre.cb_combiner@@.value  // other fields in common_pred
+        &&& self.combiner@.value().is_Ready() || self.combiner@.value().is_Placed()
+        &&& self.combiner@.value().is_Ready() ==> self.post_exec(pre.request_ids@, responses)
+        &&& self.combiner@.value().is_Placed() ==> self.pre_exec(responses)
+        &&& self.cb_combiner@.value()
+            == pre.cb_combiner@.value()  // other fields in common_pred
 
         &&& self.request_ids == pre.request_ids
     }
@@ -1760,10 +1758,10 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
         cb_inst: CyclicBuffer::Instance<DT>,
     ) -> bool {
         &&& self.common_pred(nid, data, inst, cb_inst)
-        &&& self.cb_combiner@@.value.is_Idle()
-        &&& self.combiner@@.value.is_Ready() || self.combiner@@.value.is_Placed()
-        &&& self.combiner@@.value.is_Placed() ==> self.pre_exec(responses)
-        &&& self.combiner@@.value.is_Ready() ==> {
+        &&& self.cb_combiner@.value().is_Idle()
+        &&& self.combiner@.value().is_Ready() || self.combiner@.value().is_Placed()
+        &&& self.combiner@.value().is_Placed() ==> self.pre_exec(responses)
+        &&& self.combiner@.value().is_Ready() ==> {
             &&& self.request_ids@.len() == responses.len()
         }
     }
@@ -1779,13 +1777,13 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
         cb_inst: CyclicBuffer::Instance<DT>,
     ) -> bool {
         &&& self.common_pred(nid, data, inst, cb_inst)
-        &&& self.cb_combiner@@.value == pre.cb_combiner@@.value
+        &&& self.cb_combiner@.value() == pre.cb_combiner@.value()
         &&& self.request_ids == pre.request_ids
-        &&& pre.combiner@@.value.is_Placed() ==> {
+        &&& pre.combiner@.value().is_Placed() ==> {
             &&& self.post_exec(pre.request_ids@, responses)
         }
-        &&& pre.combiner@@.value.is_Ready() ==> {
-            &&& self.combiner@@.value == pre.combiner@@.value
+        &&& pre.combiner@.value().is_Ready() ==> {
+            &&& self.combiner@.value() == pre.combiner@.value()
             &&& self.local_updates == pre.local_updates
             &&& responses == responses_old
         }
@@ -1801,8 +1799,8 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
     ) -> bool {
         &&& self.common_pred(nid, data, inst, cb_inst)
         &&& self.pre_exec(responses)
-        &&& self.cb_combiner@@.value.is_Idle()
-        &&& self.combiner@@.value.is_Placed()
+        &&& self.cb_combiner@.value().is_Idle()
+        &&& self.combiner@.value().is_Placed()
     }
 
     pub open spec fn advance_head_post(
@@ -1816,30 +1814,30 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
     ) -> bool {
         &&& self.common_pred(nid, data, inst, cb_inst)
         &&& self.request_ids == pre.request_ids
-        &&& self.cb_combiner@@.value == pre.cb_combiner@@.value
-        &&& self.combiner@@.value.is_Ready() || self.combiner@@.value.is_Placed()
-        &&& self.combiner@@.value.is_Ready() ==> {
+        &&& self.cb_combiner@.value() == pre.cb_combiner@.value()
+        &&& self.combiner@.value().is_Ready() || self.combiner@.value().is_Placed()
+        &&& self.combiner@.value().is_Ready() ==> {
             &&& self.post_exec(self.request_ids@, responses)
         }
-        &&& self.combiner@@.value.is_Placed() ==> {
+        &&& self.combiner@.value().is_Placed() ==> {
             &&& responses.len() == 0
             &&& self.local_updates == pre.local_updates
-            &&& self.combiner@@.value == pre.combiner@@.value
-            &&& self.ghost_replica@@.value == pre.ghost_replica@@.value
+            &&& self.combiner@.value() == pre.combiner@.value()
+            &&& self.ghost_replica@.value() == pre.ghost_replica@.value()
         }
     }
 
     // corresponds to Dafny's pre_exec() function
     pub open spec fn pre_exec(&self, responses: Seq<DT::Response>) -> bool {
         &&& responses.len() == 0
-        &&& self.combiner@@.value.is_Placed()
-        &&& self.combiner@@.value.get_Placed_queued_ops() == self.request_ids
+        &&& self.combiner@.value().is_Placed()
+        &&& self.combiner@.value().get_Placed_queued_ops() == self.request_ids
         &&& (forall|i|
             #![trigger self.local_updates@[i]]
             0 <= i < self.request_ids@.len() ==> {
                 &&& self.local_updates@.contains_key(i)
-                &&& self.local_updates@[i]@.key == self.request_ids@[i as int]
-                &&& self.local_updates@[i]@.value.is_Placed()
+                &&& self.local_updates@[i].key() == self.request_ids@[i as int]
+                &&& self.local_updates@[i].value().is_Placed()
             })
     }
 
@@ -1850,14 +1848,14 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
         responses: Seq<DT::Response>,
     ) -> bool {
         &&& request_ids.len() == responses.len()
-        &&& self.combiner@@.value.is_Ready()
+        &&& self.combiner@.value().is_Ready()
         &&& (forall|i|
             #![trigger self.local_updates@[i]]
             0 <= i < request_ids.len() ==> {
                 &&& self.local_updates@.contains_key(i)
-                &&& self.local_updates@[i]@.value.is_Done()
-                &&& self.local_updates@[i]@.value.get_Done_ret() == responses[i as int]
-                &&& self.local_updates@[i]@.key == request_ids[i as int]
+                &&& self.local_updates@[i].value().is_Done()
+                &&& self.local_updates@[i].value().get_Done_ret() == responses[i as int]
+                &&& self.local_updates@[i].key() == request_ids[i as int]
             })
     }
 }
@@ -1880,15 +1878,15 @@ pub open spec fn wf(&self, nid: nat, ridx: nat, inst: UnboundedLog::Instance<DT>
         &&& 0 <= self.idx <= self.request_ids.len()
         &&& ridx < self.request_ids.len()
 
-        &&& self.tail@.value == self.old_tail + self.idx
-        &&& self.tail@.instance == inst
+        &&& self.tail.value() == self.old_tail + self.idx
+        &&& self.tail.instance_id() == inst.id()
 
-        &&& self.combiner@.instance == inst
-        &&& self.combiner@.key == nid
-        &&& self.combiner@.value.is_Placed()
-        &&& self.combiner@.value.get_Placed_queued_ops().len() == self.idx
+        &&& self.combiner.instance_id() == inst.id()
+        &&& self.combiner.key() == nid
+        &&& self.combiner.value().is_Placed()
+        &&& self.combiner.value().get_Placed_queued_ops().len() == self.idx
 
-        &&& (forall |i| 0 <= i < self.idx ==> #[trigger]self.request_ids[i] == self.combiner@.value.get_Placed_queued_ops()[i])
+        &&& (forall |i| 0 <= i < self.idx ==> #[trigger]self.request_ids[i] == self.combiner.value().get_Placed_queued_ops()[i])
 
         // we added all the new entries
         &&& (forall |i| 0 <= i < self.idx <==> self.log_entries.contains_key(i))
@@ -1896,26 +1894,26 @@ pub open spec fn wf(&self, nid: nat, ridx: nat, inst: UnboundedLog::Instance<DT>
 
         // processed entries
         &&& (forall |i| #![trigger self.local_updates[i]] 0 <= i < self.idx ==> {
-            &&& self.local_updates[i]@.instance == inst
-            &&& self.local_updates[i]@.key == self.request_ids[i as int]
-            &&& self.local_updates[i]@.value.is_Placed()
-            &&& self.local_updates[i]@.value.get_Placed_op() == self.operations[i as int]
+            &&& self.local_updates[i].instance_id() == inst.id()
+            &&& self.local_updates[i].key() == self.request_ids[i as int]
+            &&& self.local_updates[i].value().is_Placed()
+            &&& self.local_updates[i].value().get_Placed_op() == self.operations[i as int]
         })
 
         // unprocessed entries
         &&& (forall |i| #![trigger self.local_updates[i]] self.idx <= i < self.request_ids.len() ==> {
-            &&& self.local_updates[i]@.instance == inst
-            &&& self.local_updates[i]@.key == self.request_ids[i as int]
-            &&& self.local_updates[i]@.value.is_Init()
-            &&& self.local_updates[i]@.value.get_Init_op() == self.operations[i as int]
+            &&& self.local_updates[i].instance_id() == inst.id()
+            &&& self.local_updates[i].key() == self.request_ids[i as int]
+            &&& self.local_updates[i].value().is_Init()
+            &&& self.local_updates[i].value().get_Init_op() == self.operations[i as int]
         })
 
         // the log entries
         &&& (forall |i| #![trigger self.log_entries[i]] 0 <= i < self.idx ==> {
-            &&& self.log_entries[i]@.instance == inst
-            &&& self.log_entries[i]@.key == self.old_tail + i
-            &&& self.log_entries[i]@.value.node_id == nid
-            &&& self.log_entries[i]@.value.op == self.operations[i as int]
+            &&& self.log_entries[i].instance_id() == inst.id()
+            &&& self.log_entries[i].key() == self.old_tail + i
+            &&& self.log_entries[i].value().node_id == nid
+            &&& self.log_entries[i].value().op == self.operations[i as int]
         })
     }
 }
@@ -1940,23 +1938,23 @@ pub open spec fn wf(&self, num_replicas: nat) -> bool {
         &&& self.cyclic_buffer_instance.num_replicas() == self.num_replicas
         &&& (forall |i| #![trigger self.replicas[i]]0 <= i < self.num_replicas ==> {
             &&& #[trigger] self.replicas.contains_key(i)
-            &&& self.replicas[i]@.instance == self.unbounded_log_instance
-            &&& self.replicas[i]@.key == i
-            &&& self.replicas[i]@.value == DT::init_spec()
+            &&& self.replicas[i].instance_id() == self.unbounded_log_instance.id()
+            &&& self.replicas[i].key() == i
+            &&& self.replicas[i].value() == DT::init_spec()
         })
 
         &&& (forall |i| #![trigger self.combiners[i]]0 <= i < self.num_replicas ==> {
             &&& #[trigger]  self.combiners.contains_key(i)
-            &&& self.combiners[i]@.instance == self.unbounded_log_instance
-            &&& self.combiners[i]@.key == i
-            &&& self.combiners[i]@.value.is_Ready()
+            &&& self.combiners[i].instance_id() == self.unbounded_log_instance.id()
+            &&& self.combiners[i].key() == i
+            &&& self.combiners[i].value().is_Ready()
         })
 
         &&& (forall |i| #![trigger self.cb_combiners[i]]0 <= i < self.num_replicas ==> {
             &&& #[trigger] self.cb_combiners.contains_key(i)
-            &&& self.cb_combiners[i]@.instance == self.cyclic_buffer_instance
-            &&& self.cb_combiners[i]@.key == i
-            &&& self.cb_combiners[i]@.value.is_Idle()
+            &&& self.cb_combiners[i].instance_id() == self.cyclic_buffer_instance.id()
+            &&& self.cb_combiners[i].key() == i
+            &&& self.cb_combiners[i].value().is_Idle()
         })
     }
 }

@@ -61,12 +61,12 @@ pub open spec fn stored_type_inv<DT: Dispatch>(
     &&& st.cell_perms@.pcell == cell_id
     &&& idx >= 0 ==> {
         &&& st.log_entry.is_Some()
-        &&& st.log_entry.get_Some_0()@.key == idx
-        &&& st.log_entry.get_Some_0()@.instance == unbounded_log_instance
+        &&& st.log_entry.get_Some_0().key() == idx
+        &&& st.log_entry.get_Some_0().instance_id() == unbounded_log_instance.id()
         &&& st.cell_perms@.value.get_Some_0().is_Some()
         &&& st.cell_perms@.value.get_Some_0().get_Some_0().node_id as NodeId
-            == st.log_entry.get_Some_0()@.value.node_id
-        &&& st.cell_perms@.value.get_Some_0().get_Some_0().op == st.log_entry.get_Some_0()@.value.op
+            == st.log_entry.get_Some_0().value().node_id
+        &&& st.cell_perms@.value.get_Some_0().get_Some_0().op == st.log_entry.get_Some_0().value().op
     }
     &&& idx < 0 ==> {
         &&& true

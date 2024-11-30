@@ -283,7 +283,7 @@ pub trait NodeReplicatedT<DT: Dispatch + Sync>: Sized {
         ensures
             result.is_Ok() ==> is_update_stub(
                 result.get_Ok_0().2@,
-                ticket@@.key,
+                ticket@.key(),
                 result.get_Ok_0().0,
                 self.unbounded_log_instance(),
             ) && result.get_Ok_0().1.wf(&self.replicas().spec_index(tkn.replica_id_spec() as int)),
@@ -307,7 +307,7 @@ pub trait NodeReplicatedT<DT: Dispatch + Sync>: Sized {
         ensures
             result.is_Ok() ==> is_readonly_stub(
                 result.get_Ok_0().2@,
-                ticket@@.key,
+                ticket@.key(),
                 result.get_Ok_0().0,
                 self.unbounded_log_instance(),
             ) && result.get_Ok_0().1.wf(&self.replicas()[tkn.replica_id_spec() as int]),
@@ -331,11 +331,10 @@ pub open spec fn is_readonly_ticket<DT: Dispatch>(
     log: UnboundedLog::Instance<DT>,
 ) -> bool {
     // requires ticket.val == ssm.Ticket(rid, input)
-    &&& ticket@.value.is_Init() && ticket@.value.get_Init_op()
-        == op
+    &&& ticket.value().is_Init() && ticket.value().get_Init_op() == op
     // requires ticket.loc == TicketStubSingletonLoc.loc()
 
-    &&& ticket@.instance == log
+    &&& ticket.instance_id() == log.id()
 }
 
 #[verus::trusted]
@@ -346,13 +345,12 @@ pub open spec fn is_readonly_stub<DT: Dispatch>(
     log: UnboundedLog::Instance<DT>,
 ) -> bool {
     // ensures stub.loc == TicketStubSingletonLoc.loc()
-    &&& stub@.instance
-        == log
+    &&& stub.instance_id() == log.id()
     // ensures ssm.IsStub(rid, output, stub.val)  -> (exists ctail, op, nodeid :: stub == ReadOp(rid, ReadonlyDone(op, output, nodeid, ctail)))
 
-    &&& stub@.key == rid
-    &&& stub@.value.is_Done()
-    &&& stub@.value.get_Done_ret() == result
+    &&& stub.key() == rid
+    &&& stub.value().is_Done()
+    &&& stub.value().get_Done_ret() == result
 }
 
 #[verus::trusted]
@@ -362,11 +360,10 @@ pub open spec fn is_update_ticket<DT: Dispatch>(
     log: UnboundedLog::Instance<DT>,
 ) -> bool {
     // requires ticket.val == ssm.Ticket(rid, input)
-    &&& ticket@.value.is_Init() && ticket@.value.get_Init_op()
-        == op
+    &&& ticket.value().is_Init() && ticket.value().get_Init_op() == op
     // requires ticket.loc == TicketStubSingletonLoc.loc()
 
-    &&& ticket@.instance == log
+    &&& ticket.instance_id() == log.id()
 }
 
 #[verus::trusted]
@@ -377,13 +374,12 @@ pub open spec fn is_update_stub<DT: Dispatch>(
     log: UnboundedLog::Instance<DT>,
 ) -> bool {
     // ensures stub.loc == TicketStubSingletonLoc.loc()
-    &&& stub@.instance
-        == log
+    &&& stub.instance_id() == log.id()
     // ensures ssm.IsStub(rid, output, stub.val)  -> (exists log_idx :: stub == UpdateOp(rid, UpdateDone(output, log_idx)))
 
-    &&& stub@.key == rid
-    &&& stub@.value.is_Done()
-    &&& stub@.value.get_Done_ret() == result
+    &&& stub.key() == rid
+    &&& stub.value().is_Done()
+    &&& stub.value().get_Done_ret() == result
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

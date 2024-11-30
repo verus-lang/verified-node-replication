@@ -43,7 +43,7 @@ pub struct RwLockReadGuard<T> {
 
 impl<T> RwLockReadGuard<T> {
     pub closed spec fn view(&self) -> T {
-        self.handle@@.key.1.view().value.get_Some_0()
+        self.handle@.element().1.view().value.get_Some_0()
     }
 }
 
@@ -89,18 +89,18 @@ struct_with_invariants!{
         }
 
         invariant on exc_locked with (inst) specifically (self.exc_locked.0) is (b: bool, g: RwLockSpec::exc_locked<PointsTo<T>>) {
-            &&& g@.instance == inst@
-            &&& g@.value == b
+            &&& g.instance_id() == inst@.id()
+            &&& g.value() == b
         }
 
         invariant on ref_counts with (inst)
             forall |i: int| where (0 <= i < self.ref_counts@.len()) specifically (self.ref_counts@[i].0)
             is (v: u64, g: RwLockSpec::ref_counts<PointsTo<T>>)
         {
-            &&& g@.instance == inst@
-            &&& g@.key == i
-            &&& g@.value == v as int
-            &&& g@.value <= MAX_RC
+            &&& g.instance_id() == inst@.id()
+            &&& g.key() == i
+            &&& g.value() == v as int
+            &&& g.value() <= MAX_RC
         }
     }
 }
@@ -121,15 +121,14 @@ impl<T> RwLock<T> {
 
     pub closed spec fn wf_read_handle(&self, read_handle: &RwLockReadGuard<T>) -> bool {
         &&& self.thread_id_valid(read_handle.tid as nat)
-        &&& read_handle.handle@@.instance == self.inst
-        &&& read_handle.handle@@.count == 1
-        &&& read_handle.handle@@.key == (read_handle.tid as int, read_handle.perms@)
+        &&& read_handle.handle@.instance_id() == self.inst@.id()
+        &&& read_handle.handle@.element() == (read_handle.tid as int, read_handle.perms@)
         &&& read_handle.perms@@.pcell == self.data.id()
         &&& read_handle.perms@@.value.is_Some()
     }
 
     pub closed spec fn wf_write_handle(&self, write_handle: &RwLockWriteGuard<T>) -> bool {
-        &&& write_handle.handle@@.instance == self.inst
+        &&& write_handle.handle@.instance_id() == self.inst@.id()
         &&& write_handle.cell_perms@@.pcell == self.data.id()
         &&& write_handle.cell_perms@@.value.is_None()
     }
@@ -178,7 +177,7 @@ impl<T> RwLock<T> {
             );
             inst = inst0;
             exc_locked_token = exc_locked_token0;
-            ref_counts_tokens = ref_counts_tokens0;
+            ref_counts_tokens = ref_counts_tokens0.into_map();
         }
         let tracked_inst: Tracked<RwLockSpec::Instance<PointsTo<T>>> = Tracked(inst.clone());
         let exc_locked_atomic = AtomicBool::new(
@@ -198,25 +197,25 @@ impl<T> RwLock<T> {
         let mut i: usize = 0;
         assert forall|j: int|
             i <= j && j < rc_width implies #[trigger] ref_counts_tokens.dom().contains(j) && equal(
-            ref_counts_tokens.index(j)@.instance,
-            inst,
-        ) && equal(ref_counts_tokens.index(j)@.key, j) && equal(
-            ref_counts_tokens.index(j)@.value,
+            ref_counts_tokens.index(j).instance_id(),
+            inst.id(),
+        ) && equal(ref_counts_tokens.index(j).key(), j) && equal(
+            ref_counts_tokens.index(j).value(),
             0,
         ) by {
             assert(ref_counts_tokens.dom().contains(j));
-            assert(equal(ref_counts_tokens.index(j)@.instance, inst));
-            assert(equal(ref_counts_tokens.index(j)@.key, j));
-            assert(equal(ref_counts_tokens.index(j)@.value, 0));
+            assert(equal(ref_counts_tokens.index(j).instance_id(), inst.id()));
+            assert(equal(ref_counts_tokens.index(j).key(), j));
+            assert(equal(ref_counts_tokens.index(j).value(), 0));
         }
         assert(forall|j: int|
             #![trigger( ref_counts_tokens.dom().contains(j) )]
             #![trigger( ref_counts_tokens.index(j) )]
             i <= j && j < rc_width ==> (ref_counts_tokens.dom().contains(j) && equal(
-                ref_counts_tokens.index(j)@.instance,
-                inst,
-            ) && equal(ref_counts_tokens.index(j)@.key, j) && equal(
-                ref_counts_tokens.index(j)@.value,
+                ref_counts_tokens.index(j).instance_id(),
+                inst.id(),
+            ) && equal(ref_counts_tokens.index(j).key(), j) && equal(
+                ref_counts_tokens.index(j).value(),
                 0,
             )));
         while i < rc_width
@@ -234,10 +233,10 @@ impl<T> RwLock<T> {
                     #![trigger( ref_counts_tokens.dom().contains(j) )]
                     #![trigger( ref_counts_tokens.index(j) )]
                     i <= j && j < rc_width ==> (ref_counts_tokens.dom().contains(j) && equal(
-                        ref_counts_tokens.index(j)@.instance,
-                        inst,
-                    ) && equal(ref_counts_tokens.index(j)@.key, j) && equal(
-                        ref_counts_tokens.index(j)@.value,
+                        ref_counts_tokens.index(j).instance_id(),
+                        inst.id(),
+                    ) && equal(ref_counts_tokens.index(j).key(), j) && equal(
+                        ref_counts_tokens.index(j).value(),
                         0,
                     )),
         {
@@ -252,14 +251,14 @@ impl<T> RwLock<T> {
             i = i + 1;
             assert forall|j: int|
                 i <= j && j < rc_width implies #[trigger] ref_counts_tokens.dom().contains(j)
-                && equal(ref_counts_tokens.index(j)@.instance, inst) && equal(
-                ref_counts_tokens.index(j)@.key,
+                && equal(ref_counts_tokens.index(j).instance_id(), inst.id()) && equal(
+                ref_counts_tokens.index(j).key(),
                 j,
-            ) && equal(ref_counts_tokens.index(j)@.value, 0) by {
+            ) && equal(ref_counts_tokens.index(j).value(), 0) by {
                 assert(ref_counts_tokens.dom().contains(j));
-                assert(equal(ref_counts_tokens.index(j)@.instance, inst));
-                assert(equal(ref_counts_tokens.index(j)@.key, j));
-                assert(equal(ref_counts_tokens.index(j)@.value, 0));
+                assert(equal(ref_counts_tokens.index(j).instance_id(), inst.id()));
+                assert(equal(ref_counts_tokens.index(j).key(), j));
+                assert(equal(ref_counts_tokens.index(j).value(), 0));
             }
         }
         let s = RwLock {
@@ -287,8 +286,8 @@ impl<T> RwLock<T> {
         while !acquired
             invariant
                 self.wf(),
-                acquired ==> token.is_Some() && token.get_Some_0()@.instance == self.inst
-                    && token.get_Some_0()@.value == 0,
+                acquired ==> token.is_Some() && token.get_Some_0().instance_id() == self.inst@.id()
+                    && token.get_Some_0().value() == 0,
         {
             let result =
                 atomic_with_ghost!(
@@ -311,8 +310,8 @@ impl<T> RwLock<T> {
             invariant
                 self.wf(),
                 idx <= self.ref_counts.len(),
-                token@.instance == self.inst,
-                token@.value == idx,
+                token.instance_id() == self.inst@.id(),
+                token.value() == idx,
         {
             // wait until the reader hasn't taken the reader lock yet
             let mut taken = true;
@@ -320,9 +319,9 @@ impl<T> RwLock<T> {
                 invariant
                     self.wf(),
                     idx < self.ref_counts.len(),
-                    token@.instance == self.inst,
-                    taken ==> token@.value == idx,
-                    !taken ==> token@.value == idx + 1,
+                    token.instance_id() == self.inst@.id(),
+                    taken ==> token.value() == idx,
+                    !taken ==> token.value() == idx + 1,
             {
                 let result =
                     atomic_with_ghost!(
