@@ -289,12 +289,10 @@ spec fn state_refinement_relation_basic<DT: Dispatch>(
     &&& (0 <= s.version && s.version
         <= s.log.len())
     // the state corresponds to the state computed at the given version
-
     &&& t.state == s.nrstate_at_version(
         s.version,
     )
     // the request ids of the readonly/update requests and responses must be unique
-
     &&& s.readonly_reqs.dom().disjoint(s.update_reqs.dom())
     &&& s.readonly_reqs.dom().disjoint(s.update_resps.dom())
     &&& s.update_reqs.dom().disjoint(s.update_resps.dom())
@@ -302,7 +300,6 @@ spec fn state_refinement_relation_basic<DT: Dispatch>(
         t.resps.dom(),
     )
     // requests are complete: if a request in present in the AState then it must be present in the SState
-
     &&& (forall|rid|
         (#[trigger] s.readonly_reqs.contains_key(rid) || #[trigger] s.update_reqs.contains_key(rid)
             || #[trigger] s.update_resps.contains_key(rid)) <==> (#[trigger] t.reqs.contains_key(
@@ -311,7 +308,6 @@ spec fn state_refinement_relation_basic<DT: Dispatch>(
             rid,
         )))
     // requests/responses in the rightmaps
-
     &&& (forall|rid| #[trigger]
         t.reqs.contains_key(rid) && #[trigger] t.reqs[rid].is_Read()
             ==> s.readonly_reqs.contains_key(rid))
@@ -324,25 +320,21 @@ spec fn state_refinement_relation_basic<DT: Dispatch>(
             rid,
         ))
     // for all log entries > version, there must be a response with the given version
-
     &&& (forall|v: LogIdx|
         s.version <= v && v < s.log.len() ==> update_response_with_version(
             s.update_resps,
             v,
         ))
     // for any two update responses, if the request id differs, the version in the log must also differ
-
     &&& (forall|rid1, rid2| #[trigger]
         s.update_resps.contains_key(rid1) && #[trigger] s.update_resps.contains_key(rid2) && rid1
             != rid2 ==> s.update_resps[rid1]
             != s.update_resps[rid2])
     // for all update responses, the version must be within the log
-
     &&& (forall|rid| #[trigger]
         s.update_resps.contains_key(rid) ==> s.update_resps[rid].0
             < s.log.len())
     // for all update requests, they must be part of the requests and the operation must match
-
     &&& (forall|rid| #[trigger]
         s.update_reqs.contains_key(rid) ==> t.reqs.contains_key(rid) && t.reqs[rid]
             == InputOperation::<DT>::Write(
@@ -350,14 +342,12 @@ spec fn state_refinement_relation_basic<DT: Dispatch>(
         ))
     // forall update responses larger than the current version, they must be in the requests,
     // the update operation must match
-
     &&& (forall|rid| #[trigger]
         s.update_resps.contains_key(rid) && s.update_resps[rid].0 >= s.version ==> {
             &&& t.reqs.contains_key(rid)
             &&& t.reqs[rid] == InputOperation::<DT>::Write(s.log[s.update_resps[rid].0 as int])
         })
     // for all update responses smaller than th eversion, they must be valid
-
     &&& (forall|rid| #[trigger]
         s.update_resps.contains_key(rid) && s.update_resps[rid].0 < s.version
             ==> update_response_is_valid(s, t, r_points, rid))
@@ -591,27 +581,23 @@ proof fn update_add_update_to_log_refines<DT: Dispatch>(
 {
     state_at_version_preserves::<DT>(s.log, s2.log, s.update_reqs[rid], s.version);
     assert forall|r| #[trigger]
-        s2.readonly_reqs.contains_key(r) && #[trigger] t.resps.contains_key(r)
-            implies readonly_response_is_valid(s2, t, r_points, r) by {
+        s2.readonly_reqs.contains_key(r) && #[trigger] t.resps.contains_key(
+            r,
+        ) implies readonly_response_is_valid(s2, t, r_points, r) by {
         if r_points.contains_key(r) {
             state_at_version_preserves::<DT>(s.log, s2.log, s.update_reqs[rid], r_points[r]);
         }
     }
     assert forall|r|
-        (#[trigger] s2.update_resps.contains_key(r) && s2.update_resps[r].0 < s2.version)
-            implies update_response_is_valid(s2, t, r_points, r) by {
-        state_at_version_preserves::<DT>(
-            s.log,
-            s2.log,
-            s.update_reqs[rid],
-            s.update_resps[r].0,
-        );
+        (#[trigger] s2.update_resps.contains_key(r) && s2.update_resps[r].0
+            < s2.version) implies update_response_is_valid(s2, t, r_points, r) by {
+        state_at_version_preserves::<DT>(s.log, s2.log, s.update_reqs[rid], s.update_resps[r].0);
     }
     assert forall|v: LogIdx|
         (s2.version <= v && v < s2.log.len()) implies update_response_with_version(
-            s2.update_resps,
-            v,
-        ) by {
+        s2.update_resps,
+        v,
+    ) by {
         if v < s2.log.len() - 1 {
             assert(update_response_with_version(s.update_resps, v));
             let qid = choose|qid| #[trigger]
@@ -658,9 +644,9 @@ proof fn update_finish_refines<DT: Dispatch>(
     };
     assert forall|v: LogIdx|
         (s2.version <= v && v < s2.log.len()) implies update_response_with_version(
-            s2.update_resps,
-            v,
-        ) by {
+        s2.update_resps,
+        v,
+    ) by {
         assert(update_response_with_version(s.update_resps, v));
         let qid = choose|qid| #[trigger]
             s.update_resps.contains_key(qid) && s.update_resps[qid].0 == v;
