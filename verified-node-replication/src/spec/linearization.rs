@@ -592,39 +592,33 @@ proof fn update_add_update_to_log_refines<DT: Dispatch>(
     state_at_version_preserves::<DT>(s.log, s2.log, s.update_reqs[rid], s.version);
     assert forall|r| #[trigger]
         s2.readonly_reqs.contains_key(r) && #[trigger] t.resps.contains_key(r)
-            ==> readonly_response_is_valid(s2, t, r_points, r) by {
-        if s2.readonly_reqs.contains_key(r) && #[trigger] t.resps.contains_key(r) {
-            if r_points.contains_key(r) {
-                state_at_version_preserves::<DT>(s.log, s2.log, s.update_reqs[rid], r_points[r]);
-            }
+            implies readonly_response_is_valid(s2, t, r_points, r) by {
+        if r_points.contains_key(r) {
+            state_at_version_preserves::<DT>(s.log, s2.log, s.update_reqs[rid], r_points[r]);
         }
     }
     assert forall|r|
         (#[trigger] s2.update_resps.contains_key(r) && s2.update_resps[r].0 < s2.version)
-            ==> update_response_is_valid(s2, t, r_points, r) by {
-        if s2.update_resps.contains_key(r) && s2.update_resps[r].0 < s2.version {
-            state_at_version_preserves::<DT>(
-                s.log,
-                s2.log,
-                s.update_reqs[rid],
-                s.update_resps[r].0,
-            );
-        }
+            implies update_response_is_valid(s2, t, r_points, r) by {
+        state_at_version_preserves::<DT>(
+            s.log,
+            s2.log,
+            s.update_reqs[rid],
+            s.update_resps[r].0,
+        );
     }
     assert forall|v: LogIdx|
-        (s2.version <= v && v < s2.log.len()) ==> update_response_with_version(
+        (s2.version <= v && v < s2.log.len()) implies update_response_with_version(
             s2.update_resps,
             v,
         ) by {
-        if s2.version <= v && v < s2.log.len() {
-            if v < s2.log.len() - 1 {
-                assert(update_response_with_version(s.update_resps, v));
-                let qid = choose|qid| #[trigger]
-                    s.update_resps.contains_key(qid) && s.update_resps[qid].0 == v;
-                assert(s2.update_resps.contains_key(qid) && s2.update_resps[qid].0 == v);
-            } else {
-                assert(s2.update_resps.contains_key(rid) && s2.update_resps[rid].0 == v);
-            }
+        if v < s2.log.len() - 1 {
+            assert(update_response_with_version(s.update_resps, v));
+            let qid = choose|qid| #[trigger]
+                s.update_resps.contains_key(qid) && s.update_resps[qid].0 == v;
+            assert(s2.update_resps.contains_key(qid) && s2.update_resps[qid].0 == v);
+        } else {
+            assert(s2.update_resps.contains_key(rid) && s2.update_resps[rid].0 == v);
         }
     }
     reveal(AsynchronousSingleton::State::next_by);
@@ -663,16 +657,14 @@ proof fn update_finish_refines<DT: Dispatch>(
         resps: t.resps.remove(rid),
     };
     assert forall|v: LogIdx|
-        (s2.version <= v && v < s2.log.len()) ==> update_response_with_version(
+        (s2.version <= v && v < s2.log.len()) implies update_response_with_version(
             s2.update_resps,
             v,
         ) by {
-        if s2.version <= v && v < s2.log.len() {
-            assert(update_response_with_version(s.update_resps, v));
-            let qid = choose|qid| #[trigger]
-                s.update_resps.contains_key(qid) && s.update_resps[qid].0 == v;
-            assert(s2.update_resps.contains_key(qid) && s2.update_resps[qid].0 == v);
-        }
+        assert(update_response_with_version(s.update_resps, v));
+        let qid = choose|qid| #[trigger]
+            s.update_resps.contains_key(qid) && s.update_resps[qid].0 == v;
+        assert(s2.update_resps.contains_key(qid) && s2.update_resps[qid].0 == v);
     }
     reveal(AsynchronousSingleton::State::next_by);
     reveal(AsynchronousSingleton::State::next);
