@@ -1862,7 +1862,7 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
 
 struct_with_invariants!{
 /// keeps track of the recursive state when applying updates to the unbounded log
-tracked struct AppendEntriesGhostState<DT: Dispatch> {
+pub tracked struct AppendEntriesGhostState<DT: Dispatch> {
     pub ghost idx               : nat,
     pub ghost old_tail          : nat,
     pub tracked log_entries     : Map<nat, UnboundedLog::log<DT>>,
