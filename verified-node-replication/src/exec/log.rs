@@ -1692,9 +1692,9 @@ impl<DT: Dispatch> NrLogAppendExecDataGhost<DT> {
         inst: UnboundedLog::Instance<DT>,
         cb_inst: CyclicBuffer::Instance<DT>,
     ) -> bool {
-        &&& (forall|i|
+        &&& (forall|i| #![all_triggers]
             0 <= i < self.request_ids@.len() ==> {
-                &&& (#[trigger] self.local_updates@.contains_key(i))
+                &&& (self.local_updates@.contains_key(i))
                 &&& self.local_updates@[i].instance_id() == inst.id()
             })
         &&& self.ghost_replica@.key() == nid
