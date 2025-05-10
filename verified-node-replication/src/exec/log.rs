@@ -285,6 +285,7 @@ impl<DT: Dispatch> NrLog<DT> {
                         cell_ids[log_entry_idx(i, log_size as nat) as int],
                         unbounded_log_instance,
                     ),
+            decreases log_size - log_idx
         {
             // pub log_entry: PCell<ConcreteLogEntry>,
             // create the log entry cell, TODO: create the concrete log entry here?
@@ -373,6 +374,7 @@ impl<DT: Dispatch> NrLog<DT> {
                         &&& slog_entries[i].is_Some()
                         &&& slog_entries[i].get_Some_0().id() == cell_ids[i]
                     },
+            decreases log_size - log_idx
         {
             let tracked cb_alive_bit;
             proof {
@@ -445,6 +447,7 @@ impl<DT: Dispatch> NrLog<DT> {
                         &&& local_versions[i].0.constant().1 == cyclic_buffer_instance
                         &&& local_versions[i].0.constant().2 == i
                     },
+            decreases num_replicas - nid
         {
             let ghost mut nid_ghost;
             let tracked ul_version;
@@ -481,6 +484,7 @@ impl<DT: Dispatch> NrLog<DT> {
                 forall|i|
                     #![trigger replica_tokens[i]]
                     0 <= i < idx ==> replica_tokens[i].id_spec() == i,
+            decreases num_replicas - idx
         {
             replica_tokens.push(ReplicaToken::new(idx as ReplicaId));
             idx = idx + 1;
@@ -692,6 +696,7 @@ impl<DT: Dispatch> NrLog<DT> {
 
     /// Inserts a slice of operations into the log.
     #[inline(always)]
+    #[verifier::exec_allows_no_decreases_clause]
     pub fn append(
         &self,
         replica_token: &ReplicaToken,
@@ -969,6 +974,7 @@ impl<DT: Dispatch> NrLog<DT> {
                             cell_ids[log_entry_idx(i, buffer_size) as int],
                             self.unbounded_log_instance@,
                         ),
+                decreases nops - idx
             {
                 let tracked cb_log_entry;
                 proof {
@@ -1059,6 +1065,7 @@ impl<DT: Dispatch> NrLog<DT> {
     /// progress, then this method will never return. Accepts a closure that is
     /// passed into execute() to ensure that this replica does not deadlock GC.
     #[inline(always)]
+    #[verifier::exec_allows_no_decreases_clause]
     fn advance_head(
         &self,
         replica_token: &ReplicaToken,
@@ -1254,6 +1261,7 @@ impl<DT: Dispatch> NrLog<DT> {
     /// Executes a passed in closure (`d`) on all operations starting from a
     /// replica's local tail on the shared log. The replica is identified
     /// through an `idx` passed in as an argument.
+    #[verifier::exec_allows_no_decreases_clause]
     pub(crate) fn execute(
         &self,
         replica_token: &ReplicaToken,
@@ -1416,6 +1424,7 @@ impl<DT: Dispatch> NrLog<DT> {
                         &&& local_updates[i].value().get_Applied_idx()
                             < combiner.value().get_Loop_tail()
                     },
+            decreases global_tail - local_version
         {
             // calculating the actual index and the
             let phys_log_idx = self.index(local_version);
@@ -1647,6 +1656,7 @@ impl<DT: Dispatch> NrLog<DT> {
                 g_cb_comb_new.value().get_AdvancingHead_min_local_version() == min_local_version,
                 g_cb_comb_new.key() == g_node_id,
                 num_replicas == self.local_versions.len(),
+            decreases num_replicas - idx
         {
             // let cur_local_tail = self.ltails[idx - 1].load(Ordering::Relaxed);
             let cur_local_tail =

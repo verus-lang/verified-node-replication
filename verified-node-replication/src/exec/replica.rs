@@ -377,6 +377,7 @@ impl<DT: Dispatch> Replica<DT> {
                         &&& thread_tokens[i].fc_client@.instance_id() == fc_instance.id()
                         &&& thread_tokens[i].batch_perm@@.pcell == contexts[i].batch.0.id()
                     },
+            decreases num_threads - idx
         {
             let tracked slot;
             let tracked client;
@@ -768,6 +769,7 @@ impl<DT: Dispatch> Replica<DT> {
                     0,
                     request_ids.len(),
                 ),
+            decreases num_registered_threads - thread_idx
         {
             let tracked update_req: std::option::Option<UnboundedLog::local_updates<DT>>;
             let tracked batch_perms: std::option::Option<PointsTo<PendingOperation<DT>>>;
@@ -920,6 +922,7 @@ impl<DT: Dispatch> Replica<DT> {
                     resp_idx as nat,
                     request_ids@.len(),
                 ),
+            decreases num_registered_threads - thread_idx
         {
             proof {
                 rids_match_pop(
@@ -1009,6 +1012,7 @@ impl<DT: Dispatch> Replica<DT> {
     /// response.
     ///
     /// In Dafny this refers to do_operation
+    #[verifier::exec_allows_no_decreases_clause]
     pub fn execute(
         &self,
         slog: &NrLog<DT>,
@@ -1194,6 +1198,7 @@ impl<DT: Dispatch> Replica<DT> {
     }
 
     /// Busy waits until a response is available within the thread's context.
+    #[verifier::exec_allows_no_decreases_clause]
     fn get_response(
         &self,
         slog: &NrLog<DT>,

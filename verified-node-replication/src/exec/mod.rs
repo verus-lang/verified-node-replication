@@ -178,6 +178,7 @@ impl<DT: Dispatch + Sync> crate::NodeReplicatedT<DT> for NodeReplicated<DT> {
                         &&& cb_combiners[i].key() == i
                         &&& cb_combiners[i].value().is_Idle()
                     }),
+            decreases num_replicas - idx
         {
             let ghost mut idx_ghost;
             proof { idx_ghost = idx as nat }

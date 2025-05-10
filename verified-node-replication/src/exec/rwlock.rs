@@ -239,6 +239,7 @@ impl<T> RwLock<T> {
                         ref_counts_tokens.index(j).value(),
                         0,
                     )),
+            decreases rc_width - i
         {
             assert(ref_counts_tokens.dom().contains(i as int));
             let tracked ref_count_token = ref_counts_tokens.tracked_remove(i as int);
@@ -272,6 +273,7 @@ impl<T> RwLock<T> {
         s
     }
 
+    #[verifier::exec_allows_no_decreases_clause]
     pub fn acquire_write(&self) -> (res: (T, Tracked<RwLockWriteGuard<T>>))
         requires
             self.wf(),
@@ -345,6 +347,7 @@ impl<T> RwLock<T> {
         (t, Tracked(RwLockWriteGuard { handle, cell_perms: Tracked(cell_perms) }))
     }
 
+    #[verifier::exec_allows_no_decreases_clause]
     pub fn acquire_read<'a>(&'a self, tid: usize) -> (res: RwLockReadGuard<T>)
         requires
             self.wf() && self.thread_id_valid(tid as nat),
