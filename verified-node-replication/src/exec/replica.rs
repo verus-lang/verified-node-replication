@@ -749,7 +749,7 @@ impl<DT: Dispatch> Replica<DT> {
                     #[trigger] flat_combiner@.value().get_Collecting_0()[i as int]).is_some() ==> {
                         &&& cell_permissions.contains_key(i)
                         &&& cell_permissions[i]@.pcell === self.contexts@[i as int].batch.0.id()
-                        &&& cell_permissions[i]@.value.is_some()
+                        &&& cell_permissions[i].mem_contents().is_init()
                     },
                 forall|i| 0 <= i < request_ids.len() <==> updates.contains_key(i),
                 forall|i: nat|
@@ -899,7 +899,7 @@ impl<DT: Dispatch> Replica<DT> {
                     #[trigger] flat_combiner.value().get_Responding_0()[i as int]).is_some() ==> {
                         &&& cell_permissions.contains_key(i)
                         &&& cell_permissions[i]@.pcell === self.contexts@[i as int].batch.0.id()
-                        &&& cell_permissions[i]@.value.is_some()
+                        &&& cell_permissions[i].mem_contents().is_init()
                     },
                 forall|i: nat|
                     resp_idx <= i < request_ids@.len() ==> {
@@ -1321,17 +1321,17 @@ pub open spec fn inv(&self, combiner_instance: FlatCombiner::Instance, responses
         &&& self.flat_combiner@.value().get_Collecting_0().len() == 0
         &&& self.flat_combiner@.instance_id() == combiner_instance.id()
 
-        &&& self.collected_operations_perm@@.value.is_some()
+        &&& self.collected_operations_perm@.mem_contents().is_init()
         &&& self.collected_operations_perm@@.pcell == op_buffer_id
-        &&& self.collected_operations_perm@@.value.get_Some_0().len() == 0 // we use vector push MAX_THREADS_PER_REPLICA
+        &&& self.collected_operations_perm@.mem_contents().value().len() == 0 // we use vector push MAX_THREADS_PER_REPLICA
 
-        &&& self.responses_token@@.value.is_some()
+        &&& self.responses_token@.mem_contents().is_init()
         &&& self.responses_token@@.pcell == responses_id
-        &&& self.responses_token@@.value.get_Some_0().len() == 0 // we use vector push MAX_THREADS_PER_REPLICA
+        &&& self.responses_token@.mem_contents().value().len() == 0 // we use vector push MAX_THREADS_PER_REPLICA
 
-        &&& self.collected_operations_per_thread_perm@@.value.is_some()
+        &&& self.collected_operations_per_thread_perm@.mem_contents().is_init()
         &&& self.collected_operations_per_thread_perm@@.pcell == thread_ops
-        &&& self.collected_operations_per_thread_perm@@.value.get_Some_0().len() == 0
+        &&& self.collected_operations_per_thread_perm@.mem_contents().value().len() == 0
     }
 }}  // struct_with_invariants!
 
@@ -1365,7 +1365,7 @@ impl<DT: Dispatch> ThreadOpsData<DT> {
                 &&& self.flat_combiner@.value().get_Responding_0()[i as int].is_some() ==> {
                     &&& self.cell_permissions@.contains_key(i)
                     &&& self.cell_permissions@[i]@.pcell === replica_contexts[i as int].batch.0.id()
-                    &&& self.cell_permissions@[i]@.value.is_some()
+                    &&& self.cell_permissions@[i].mem_contents().is_init()
                 }
             })
     }

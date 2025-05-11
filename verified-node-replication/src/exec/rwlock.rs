@@ -43,7 +43,7 @@ pub struct RwLockReadGuard<T> {
 
 impl<T> RwLockReadGuard<T> {
     pub closed spec fn view(&self) -> T {
-        self.handle@.element().1.view().value.get_Some_0()
+        self.handle@.element().1.mem_contents().value()
     }
 }
 
@@ -83,8 +83,8 @@ struct_with_invariants!{
                 && self.ref_counts@.index(i).0.constant() === (self.inst, i)
 
             &&& forall |v: PointsTo<T>| #[trigger] self.inst@.user_inv().contains(v) == (
-                equal(v@.pcell, self.data.id()) && v@.value.is_Some()
-                        && self.user_inv@.contains(v@.value.get_Some_0())
+                equal(v@.pcell, self.data.id()) && v.mem_contents().is_init()
+                        && self.user_inv@.contains(v.mem_contents().value())
             )
         }
 
@@ -124,13 +124,13 @@ impl<T> RwLock<T> {
         &&& read_handle.handle@.instance_id() == self.inst@.id()
         &&& read_handle.handle@.element() == (read_handle.tid as int, read_handle.perms@)
         &&& read_handle.perms@@.pcell == self.data.id()
-        &&& read_handle.perms@@.value.is_Some()
+        &&& read_handle.perms@.mem_contents().is_init()
     }
 
     pub closed spec fn wf_write_handle(&self, write_handle: &RwLockWriteGuard<T>) -> bool {
         &&& write_handle.handle@.instance_id() == self.inst@.id()
         &&& write_handle.cell_perms@@.pcell == self.data.id()
-        &&& write_handle.cell_perms@@.value.is_None()
+        &&& write_handle.cell_perms@.mem_contents().is_uninit()
     }
 
     #[verifier(spinoff_prover)]
@@ -152,8 +152,8 @@ impl<T> RwLock<T> {
             |s: PointsTo<T>|
                 {
                     &&& equal(s@.pcell, pcell_data.id())
-                    &&& s@.value.is_Some()
-                    &&& set_inv.contains(s@.value.get_Some_0())
+                    &&& s.mem_contents().is_init()
+                    &&& set_inv.contains(s.mem_contents().value())
                 },
         );
         proof {
