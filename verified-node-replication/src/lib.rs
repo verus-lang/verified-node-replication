@@ -8,8 +8,8 @@
 //!
 //! This top-level module contains the trusted traits and the top-level lemmas.
 #[allow(unused_imports)]
-use builtin::*;
-use state_machines_macros::state_machine;
+use verus_builtin::*;
+use verus_state_machines_macros::state_machine;
 use vstd::prelude::*;
 
 pub mod constants;

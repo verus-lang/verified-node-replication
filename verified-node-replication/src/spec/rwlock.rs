@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 #[allow(unused_imports)]
-use builtin::*;
-use builtin_macros::*;
-use state_machines_macros::tokenized_state_machine;
+use verus_builtin::*;
+use verus_builtin_macros::*;
+use verus_state_machines_macros::tokenized_state_machine;
 use vstd::{multiset::*, prelude::*};
 
 verus! {

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 #[allow(unused_imports)]
-use builtin::*;
-use builtin_macros::*;
+use verus_builtin::*;
+use verus_builtin_macros::*;
 use vstd::{
     atomic_ghost::{AtomicBool, AtomicU64},
     atomic_with_ghost,

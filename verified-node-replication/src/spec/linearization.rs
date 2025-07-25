@@ -3,7 +3,7 @@
 //
 // The Linearization Proof
 #[allow(unused_imports)]
-use builtin::*;
+use verus_builtin::*;
 // use vstd::*;
 use vstd::prelude::*;
 
