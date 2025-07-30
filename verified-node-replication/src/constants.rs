@@ -5,8 +5,8 @@
 //! verification. The constants mostly define the size of the log, and certain thresholds
 //! when warnings are being printed etc.
 #[allow(unused_imports)]
-use builtin::*;
-use builtin_macros::*;
+use verus_builtin::*;
+use verus_builtin_macros::*;
 
 verus! {
 

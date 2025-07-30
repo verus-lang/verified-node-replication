@@ -3,8 +3,8 @@
 //
 // rust_verify/tests/example.rs ignore
 #[allow(unused_imports)]
-use builtin::*;
-use builtin_macros::*;
+use verus_builtin::*;
+use verus_builtin_macros::*;
 
 use vstd::prelude::*;
 
@@ -15,7 +15,7 @@ use vstd::seq::Seq;
 use vstd::seq_lib::*;
 
 #[cfg(verus_keep_ghost)]
-use state_machines_macros::*;
+use verus_state_machines_macros::*;
 
 use crate::{Dispatch, InputOperation, OutputOperation, ReqId};
 

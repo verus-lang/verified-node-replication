@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 #[allow(unused_imports)]
-use builtin::*;
-use builtin_macros::*;
+use verus_builtin::*;
+use verus_builtin_macros::*;
 
 use vstd::prelude::*;
 
-use state_machines_macros::*;
+use verus_state_machines_macros::*;
 
 use super::types::*;
 // use super::utils::*;
