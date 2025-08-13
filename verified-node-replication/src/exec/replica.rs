@@ -237,7 +237,7 @@ pub open spec fn wf(&self) -> bool {
         // v != 0 means lock is not taken, if it's not taken, the ghost state is Some
         &&& (v == 0) <==> g.is_some()
         //
-        &&& (g.is_some() ==> g.get_Some_0().inv(flat_combiner_instance@, responses.id(), collected_operations.id(), collected_operations_per_thread.id()))
+        &&& (g matches Some(g) ==> g.inv(flat_combiner_instance@, responses.id(), collected_operations.id(), collected_operations_per_thread.id()))
     }
 
     // invariant on num_threads with (flat_combiner_instance) specifically (self.num_threads.0)  is (v: u64, g: Tracked<u64>) {
@@ -462,7 +462,7 @@ impl<DT: Dispatch> Replica<DT> {
             self.wf(),
         ensures
             result.0 ==> result.1@.is_some(),
-            result.0 ==> result.1@.get_Some_0().inv(
+            result.0 ==> result.1@.unwrap().inv(
                 self.flat_combiner_instance@,
                 self.responses.id(),
                 self.collected_operations.id(),
@@ -783,7 +783,7 @@ impl<DT: Dispatch> Replica<DT> {
                     self.flat_combiner_instance.borrow().pre_combiner_collect_request(&g.slots, flat_combiner.borrow());
 
                     rids_match_add_rid(flat_combiner.view().value().get_Collecting_0(), request_ids,
-                        0, flat_combiner.view().value().get_Collecting_0().len(), 0, request_ids.len(),g.update.get_Some_0().key());
+                        0, flat_combiner.view().value().get_Collecting_0().len(), 0, request_ids.len(),g.update.unwrap().key());
 
                     update_req = g.update;
                     batch_perms = g.batch_perms;
@@ -998,7 +998,7 @@ impl<DT: Dispatch> Replica<DT> {
             old(self).replica_token@ == self.replica_token@,
             old(self).unbounded_log_instance@ == self.unbounded_log_instance@,
             old(self).cyclic_buffer_instance@ == self.cyclic_buffer_instance@,
-            res.is_Some() ==> res.get_Some_0().wf(self),
+            res matches Some(res) ==> res.wf(self),
     {
         self.thread_tokens.pop()
     }
@@ -1234,7 +1234,7 @@ impl<DT: Dispatch> Replica<DT> {
                 context.flat_combiner_instance@ == self.flat_combiner_instance@,
                 context.unbounded_log_instance@ == self.unbounded_log_instance@,
                 0 <= iter <= RESPONSE_CHECK_INTERVAL,
-                r.is_None() ==> context_ghost_new@.dequeue_resp_pre(
+                r.is_none() ==> context_ghost_new@.dequeue_resp_pre(
                     context.batch.0.id(),
                     tid as nat,
                     self.flat_combiner_instance@,
