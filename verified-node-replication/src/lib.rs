@@ -263,7 +263,7 @@ pub trait NodeReplicatedT<DT: Dispatch + Sync>: Sized {
             old(self).wf(),
         ensures
             self.wf(),
-            result.is_Some() ==> result.get_Some_0().wf(&self.replicas()[replica_id as int]),
+            result matches Some(r) ==> r.wf(&self.replicas()[replica_id as int]),
     ;
 
     /// executes an update operation against the data structure.
@@ -281,13 +281,13 @@ pub trait NodeReplicatedT<DT: Dispatch + Sync>: Sized {
             tkn.wf(&self.replicas().spec_index(tkn.replica_id_spec() as int)),
             is_update_ticket(ticket@, op, self.unbounded_log_instance()),
         ensures
-            result.is_Ok() ==> is_update_stub(
-                result.get_Ok_0().2@,
+            result matches Ok(ok) ==> is_update_stub(
+                ok.2@,
                 ticket@.key(),
-                result.get_Ok_0().0,
+                ok.0,
                 self.unbounded_log_instance(),
-            ) && result.get_Ok_0().1.wf(&self.replicas().spec_index(tkn.replica_id_spec() as int)),
-            result.is_Err() ==> result.get_Err_0().1 == ticket && result.get_Err_0().0 == tkn,
+            ) && ok.1.wf(&self.replicas().spec_index(tkn.replica_id_spec() as int)),
+            result matches Err(err) ==> err == (tkn, ticket),
     ;
 
     /// executes a read-only operation against the data structure.
@@ -305,13 +305,13 @@ pub trait NodeReplicatedT<DT: Dispatch + Sync>: Sized {
             tkn.wf(&self.replicas()[tkn.replica_id_spec() as int]),
             is_readonly_ticket(ticket@, op, self.unbounded_log_instance()),
         ensures
-            result.is_Ok() ==> is_readonly_stub(
-                result.get_Ok_0().2@,
+            result matches Ok(ok) ==> is_readonly_stub(
+                ok.2@,
                 ticket@.key(),
-                result.get_Ok_0().0,
+                ok.0,
                 self.unbounded_log_instance(),
-            ) && result.get_Ok_0().1.wf(&self.replicas()[tkn.replica_id_spec() as int]),
-            result.is_Err() ==> result.get_Err_0().1 == ticket && result.get_Err_0().0 == tkn,
+            ) && ok.1.wf(&self.replicas()[tkn.replica_id_spec() as int]),
+            result matches Err(err) ==> err == (tkn, ticket),
     ;
 }
 

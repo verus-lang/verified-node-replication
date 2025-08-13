@@ -444,38 +444,38 @@ pub open spec fn inv(&self, v: u64, tid: nat, cell: PCell<PendingOperation<DT>>,
         &&& (v == 1 ==> self.slots.value().is_Request() || self.slots.value().is_InProgress())
 
         &&& (self.slots.value().is_Empty() ==> {
-            &&& self.update.is_None()
-            &&& self.batch_perms.is_None()
+            &&& self.update.is_none()
+            &&& self.batch_perms.is_none()
         })
 
         &&& (self.slots.value().is_Request() ==> {
-            &&& self.update.is_Some()
-            &&& self.update.get_Some_0().value().is_Init()
-            &&& self.update.get_Some_0().key() == self.slots.value().get_ReqId()
-            &&& self.update.get_Some_0().instance_id() == inst.id()
+            &&& self.update matches Some(update)
+            &&& update.value().is_Init()
+            &&& update.key() == self.slots.value().get_ReqId()
+            &&& update.instance_id() == inst.id()
 
-            &&& self.batch_perms.is_Some()
-            &&& self.batch_perms.get_Some_0().mem_contents().is_init()
-            &&& self.batch_perms.get_Some_0()@.pcell == cell.id()
-            &&& self.batch_perms.get_Some_0().mem_contents().value().op == self.update.get_Some_0().value().get_Init_op()
+            &&& self.batch_perms matches Some(batch_perms)
+            &&& batch_perms.mem_contents().is_init()
+            &&& batch_perms@.pcell == cell.id()
+            &&& batch_perms.mem_contents().value().op == update.value().get_Init_op()
         })
 
         &&& (self.slots.value().is_InProgress() ==> {
-            &&& self.update.is_None()
-            &&& self.batch_perms.is_None()
+            &&& self.update.is_none()
+            &&& self.batch_perms.is_none()
         })
 
         &&& (self.slots.value().is_Response() ==> {
-            &&& self.update.is_Some()
-            &&& self.update.get_Some_0().value().is_Done()
-            &&& self.update.get_Some_0().key() == self.slots.value().get_ReqId()
-            &&& self.update.get_Some_0().instance_id() == inst.id()
+            &&& self.update matches Some(update)
+            &&& update.value().is_Done()
+            &&& update.key() == self.slots.value().get_ReqId()
+            &&& update.instance_id() == inst.id()
 
-            &&& self.batch_perms.is_Some()
-            &&& self.batch_perms.get_Some_0().mem_contents().is_init()
-            &&& self.batch_perms.get_Some_0()@.pcell == cell.id()
-            &&& self.batch_perms.get_Some_0().mem_contents().value().resp.is_Some()
-            &&& self.batch_perms.get_Some_0().mem_contents().value().resp.get_Some_0() == self.update.get_Some_0().value().get_Done_ret()
+            &&& self.batch_perms matches Some(batch_perms)
+            &&& batch_perms.mem_contents().is_init()
+            &&& batch_perms@.pcell == cell.id()
+            &&& batch_perms.mem_contents().value().resp matches Some(resp)
+            &&& resp == update.value().get_Done_ret()
         })
     }
 }
@@ -499,14 +499,14 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
         fc_inst: FlatCombiner::Instance,
         inst: UnboundedLog::Instance<DT>,
     ) -> bool {
-        &&& self.local_updates.is_Some()
-        &&& self.local_updates.get_Some_0().instance_id() == inst.id()
-        &&& self.local_updates.get_Some_0().value().is_Init()
-        &&& self.local_updates.get_Some_0().value().get_Init_op() == op
-        &&& self.batch_perms.is_Some()
-        &&& self.batch_perms.get_Some_0()@.pcell == self.cell_id
+        &&& self.local_updates matches Some(local_updates)
+        &&& local_updates.instance_id() == inst.id()
+        &&& local_updates.value().is_Init()
+        &&& local_updates.value().get_Init_op() == op
+        &&& self.batch_perms matches Some(batch_perms)
+        &&& batch_perms@.pcell == self.cell_id
         &&& self.cell_id == batch_cell
-        &&& self.batch_perms.get_Some_0().mem_contents().is_uninit()
+        &&& batch_perms.mem_contents().is_uninit()
         &&& self.fc_clients.instance_id() == fc_inst.id()
         &&& self.fc_clients.key() == tid
         &&& self.fc_clients.value().is_Idle()
@@ -514,15 +514,15 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
 
     pub open spec fn enqueue_op_post(&self, pre: FCClientRequestResponseGhost<DT>) -> bool
         recommends
-            pre.local_updates.is_Some(),
+            pre.local_updates.is_some(),
     {
         &&& self.fc_clients.value().is_Waiting()
-        &&& self.fc_clients.value().get_Waiting_0() == pre.local_updates.get_Some_0().key()
+        &&& self.fc_clients.value().get_Waiting_0() == pre.local_updates.unwrap().key()
         &&& self.fc_clients.instance_id() == pre.fc_clients.instance_id()
         &&& self.fc_clients.key() == pre.fc_clients.key()
         &&& self.cell_id == pre.cell_id
-        &&& self.batch_perms.is_None()
-        &&& self.local_updates.is_None()
+        &&& self.batch_perms.is_none()
+        &&& self.local_updates.is_none()
     }
 
     pub open spec fn dequeue_resp_pre(
@@ -534,8 +534,8 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
         &&& self.fc_clients.key() == tid
         &&& self.fc_clients.instance_id() == fc_inst.id()
         &&& self.fc_clients.value().is_Waiting()
-        &&& self.batch_perms.is_None()
-        &&& self.local_updates.is_None()
+        &&& self.batch_perms.is_none()
+        &&& self.local_updates.is_none()
         &&& self.cell_id == batch_cell
     }
 
@@ -545,21 +545,21 @@ impl<DT: Dispatch> FCClientRequestResponseGhost<DT> {
         ret: Option<DT::Response>,
         inst: UnboundedLog::Instance<DT>,
     ) -> bool {
-        &&& ret.is_Some() ==> {
+        &&& ret matches Some(ret) ==> {
             &&& self.cell_id == pre.cell_id
-            &&& self.batch_perms.is_Some()
-            &&& self.batch_perms.get_Some_0().mem_contents().is_uninit()
-            &&& self.batch_perms.get_Some_0()@.pcell == self.cell_id
-            &&& self.local_updates.is_Some()
-            &&& self.local_updates.get_Some_0().instance_id() == inst.id()
-            &&& self.local_updates.get_Some_0().value().is_Done()
-            &&& self.local_updates.get_Some_0().key() == pre.fc_clients.value().get_Waiting_0()
-            &&& self.local_updates.get_Some_0().value().get_Done_ret() == ret.get_Some_0()
+            &&& self.batch_perms matches Some(batch_perms)
+            &&& batch_perms.mem_contents().is_uninit()
+            &&& batch_perms@.pcell == self.cell_id
+            &&& self.local_updates matches Some(local_updates)
+            &&& local_updates.instance_id() == inst.id()
+            &&& local_updates.value().is_Done()
+            &&& local_updates.key() == pre.fc_clients.value().get_Waiting_0()
+            &&& local_updates.value().get_Done_ret() == ret
             &&& self.fc_clients.instance_id() == pre.fc_clients.instance_id()
             &&& self.fc_clients.key() == pre.fc_clients.key()
             &&& self.fc_clients.value().is_Idle()
         }
-        &&& ret.is_None() ==> {
+        &&& ret.is_none() ==> {
             &&& self == pre
         }
     }

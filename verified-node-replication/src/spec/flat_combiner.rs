@@ -61,8 +61,8 @@ impl CombinerState {
             0 <= tid < self.req_len(),
     {
         match self {
-            CombinerState::Collecting(reqs) => reqs[tid as int].is_None(),
-            CombinerState::Responding(reqs, _) => reqs[tid as int].is_None(),
+            CombinerState::Collecting(reqs) => reqs[tid as int].is_none(),
+            CombinerState::Responding(reqs, _) => reqs[tid as int].is_none(),
         }
     }
 
@@ -71,8 +71,8 @@ impl CombinerState {
             0 <= tid < self.req_len(),
     {
         match self {
-            CombinerState::Collecting(reqs) => reqs[tid as int].is_Some(),
-            CombinerState::Responding(reqs, _) => reqs[tid as int].is_Some(),
+            CombinerState::Collecting(reqs) => reqs[tid as int].is_some(),
+            CombinerState::Responding(reqs, _) => reqs[tid as int].is_some(),
         }
     }
 }
@@ -146,13 +146,13 @@ FlatCombiner {
         match self.combiner {
             CombinerState::Collecting(elems) => {
                 // fff
-                &&& (forall |i: nat| 0 <= i < elems.len() && elems[i as int].is_None()
+                &&& (forall |i: nat| 0 <= i < elems.len() && elems[i as int].is_none()
                     ==> !(#[trigger] self.slots[i]).is_InProgress()) //Self::slot_in_progress(self.slots, i)))
                 // everything above is not in progress
                 &&& (forall |i: nat| elems.len() <= i < self.num_threads ==> !self.slots[i].is_InProgress())
             },
             CombinerState::Responding(elems, idx) => {
-                &&& (forall |i: nat| 0 <= i < elems.len() && elems[i as int].is_None()
+                &&& (forall |i: nat| 0 <= i < elems.len() && elems[i as int].is_none()
                     ==> !(#[trigger] self.slots[i]).is_InProgress()) //Self::slot_in_progress(self.slots, i)))
                 &&& (forall |i: nat| 0 <= i < idx ==> !self.slots[i].is_InProgress())
             },
@@ -163,12 +163,12 @@ FlatCombiner {
     pub fn inv_combiner_request_ids(&self) -> bool {
         match self.combiner {
             CombinerState::Collecting(elems) => {
-                forall |i:nat| (0 <= i < elems.len() && elems[i as int].is_Some())
-                    ==> (#[trigger] self.slots[i]).is_InProgress() && (#[trigger] self.slots[i]).get_InProgress_0() == elems[i as int ].get_Some_0()
+                forall |i:nat| (0 <= i < elems.len() && elems[i as int].is_some())
+                    ==> (#[trigger] self.slots[i]).is_InProgress() && (#[trigger] self.slots[i]).get_InProgress_0() == elems[i as int].unwrap()
             },
             CombinerState::Responding(elems, idx) => {
-                forall |i:nat| idx <= i < elems.len() && elems[i as int].is_Some()
-                   ==> (#[trigger] self.slots[i]).is_InProgress() && (#[trigger] self.slots[i]).get_InProgress_0() == elems[i as int].get_Some_0()
+                forall |i:nat| idx <= i < elems.len() && elems[i as int].is_some()
+                   ==> (#[trigger] self.slots[i]).is_InProgress() && (#[trigger] self.slots[i]).get_InProgress_0() == elems[i as int].unwrap()
             },
         }
     }
@@ -280,7 +280,7 @@ FlatCombiner {
             update combiner = CombinerState::Responding(pre.combiner.get_Responding_0(), tid + 1);
             remove slots -= [ tid => let r ];
             assert let SlotState::InProgress(rid) = r;
-            assert pre.combiner.get_Responding_0()[tid as int].get_Some_0() == rid;
+            assert pre.combiner.get_Responding_0()[tid as int].unwrap() == rid;
             add    slots += [ tid => SlotState::Response(rid) ];
         }
     }

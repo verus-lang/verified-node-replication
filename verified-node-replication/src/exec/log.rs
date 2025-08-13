@@ -273,10 +273,10 @@ impl<DT: Dispatch> NrLog<DT> {
                 -log_size <= logical_log_idx <= 0,
                 slog_entries.len() == log_idx,
                 cell_ids.len() == log_idx,
-                forall|i| 0 <= i < log_idx ==> (#[trigger] slog_entries[i]).is_Some(),
+                forall|i| 0 <= i < log_idx ==> (#[trigger] slog_entries[i]).is_some(),
                 forall|i|
                     0 <= i < log_idx ==> #[trigger] cell_ids[i] == (
-                    #[trigger] slog_entries[i]).get_Some_0().id(),
+                    #[trigger] slog_entries[i]).unwrap().id(),
                 forall|i| -log_size <= i < logical_log_idx <==> #[trigger] contents.contains_key(i),
                 forall|i| #[trigger]
                     contents.contains_key(i) ==> stored_type_inv(
@@ -367,12 +367,12 @@ impl<DT: Dispatch> NrLog<DT> {
                         &&& cb_alive_bits[i].value() == false
                         &&& cb_alive_bits[i].instance_id() == cyclic_buffer_instance.id()
                     },
-                forall|i| 0 <= i < log_idx ==> slog_entries.spec_index(i).is_None(),
+                forall|i| 0 <= i < log_idx ==> slog_entries.spec_index(i).is_none(),
                 forall|i|
                     #![trigger slog_entries[i]]
                     log_idx <= i < log_size ==> {
-                        &&& slog_entries[i].is_Some()
-                        &&& slog_entries[i].get_Some_0().id() == cell_ids[i]
+                        &&& slog_entries[i] matches Some(entry)
+                        &&& entry.id() == cell_ids[i]
                     },
             decreases log_size - log_idx
         {
@@ -382,7 +382,7 @@ impl<DT: Dispatch> NrLog<DT> {
             }
             let mut log_entry = Option::None;
             slog_entries.set_and_swap(log_idx, &mut log_entry);
-            assert(log_entry.is_Some());
+            assert(log_entry.is_some());
             let log_entry = log_entry.unwrap();
             let cb_inst = Tracked(cyclic_buffer_instance.clone());
             let entry = BufferEntry {
@@ -1527,7 +1527,7 @@ impl<DT: Dispatch> NrLog<DT> {
             } else {
                 // case: remote dispatch
                 proof {
-                    assert(stored_entry.log_entry.get_Some_0().value().node_id != nid);
+                    assert(stored_entry.log_entry.unwrap().value().node_id != nid);
                     if let Option::Some(e) = &stored_entry.log_entry {
                         assert(e.value().node_id != nid);
                         // assert(ghost_replica@.key == nid as nat);

@@ -288,8 +288,8 @@ impl<T> RwLock<T> {
         while !acquired
             invariant
                 self.wf(),
-                acquired ==> token.is_Some() && token.get_Some_0().instance_id() == self.inst@.id()
-                    && token.get_Some_0().value() == 0,
+                acquired ==> (token matches Some(token) && token.instance_id() == self.inst@.id()
+                    && token.value() == 0),
         {
             let result =
                 atomic_with_ghost!(
@@ -297,7 +297,7 @@ impl<T> RwLock<T> {
                 returning res;
                 ghost g =>
             {
-                if res.is_Ok() {
+                if res.is_ok() {
                     token = Option::Some(self.inst.borrow().exc_start(&mut g));
                 }
             });

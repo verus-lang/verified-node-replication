@@ -25,9 +25,9 @@ pub open spec fn rids_match(
     if bools_end == bools_start {
         rids_end == rids_start
     } else {
-        if bools[bools_end - 1].is_Some() {
+        if let Some(end) = bools[bools_end - 1] {
             &&& rids_end > rids_start
-            &&& rids[rids_end - 1] == bools[bools_end - 1].get_Some_0()
+            &&& rids[rids_end - 1] == end
             &&& rids_match(
                 bools,
                 rids,
@@ -62,7 +62,7 @@ pub proof fn rids_match_add_none(
     if bools_end == bools_start {
         assert(rids_match(bools_new, rids, bools_start, bools_end, rids_start, rids_end));
     } else {
-        if bools[bools_end - 1].is_Some() {
+        if bools[bools_end - 1].is_some() {
             rids_match_add_none(
                 bools,
                 rids,
@@ -113,7 +113,7 @@ pub proof fn rids_match_add_rid(
     if bools_end == bools_start {
         assert(rids_match(bools_new, rids_new, bools_start, bools_end, rids_start, rids_end));
     } else {
-        if bools[bools_end - 1].is_Some() {
+        if bools[bools_end - 1].is_some() {
             rids_match_add_rid(
                 bools,
                 rids,
@@ -154,9 +154,9 @@ pub proof fn rids_match_pop(
             rids_match(bools, rids, bools_start, bools_end, rids_start, rids_end)
         },
         bools_end > bools_start ==> {
-            &&& bools[bools_start as int].is_Some() ==> {
+            &&& bools[bools_start as int] matches Some(start) ==> {
                 &&& rids_start < rids_end
-                &&& rids[rids_start as int] == bools[bools_start as int].get_Some_0()
+                &&& rids[rids_start as int] == start
                 &&& rids_match(
                     bools,
                     rids,
@@ -166,7 +166,7 @@ pub proof fn rids_match_pop(
                     rids_end,
                 )
             }
-            &&& bools[bools_start as int].is_None() ==> {
+            &&& bools[bools_start as int].is_none() ==> {
                 &&& rids_match(
                     bools,
                     rids,
@@ -181,7 +181,7 @@ pub proof fn rids_match_pop(
 {
     if bools_end == bools_start {
     } else {
-        if bools[bools_end - 1].is_Some() {
+        if bools[bools_end - 1].is_some() {
             rids_match_pop(
                 bools,
                 rids,
