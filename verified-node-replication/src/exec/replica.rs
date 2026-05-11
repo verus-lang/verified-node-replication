@@ -709,12 +709,12 @@ impl<DT: Dispatch> Replica<DT> {
             flat_combiner@.value().is_Collecting(),
             flat_combiner@.value().get_Collecting_0().len() == 0,
         ensures
-            operations.len() <= MAX_REQUESTS,
+            final(operations).len() <= MAX_REQUESTS,
             response@.collect_thread_ops_post(
                 self.flat_combiner_instance,
                 self.unbounded_log_instance@,
-                num_ops_per_thread@,
-                operations@,
+                final(num_ops_per_thread)@,
+                final(operations)@,
                 self.contexts@,
             ),
     {
@@ -994,11 +994,11 @@ impl<DT: Dispatch> Replica<DT> {
         requires
             old(self).wf(),
         ensures
-            self.wf(),
-            old(self).replica_token@ == self.replica_token@,
-            old(self).unbounded_log_instance@ == self.unbounded_log_instance@,
-            old(self).cyclic_buffer_instance@ == self.cyclic_buffer_instance@,
-            res matches Some(res) ==> res.wf(self),
+            final(self).wf(),
+            old(self).replica_token@ == final(self).replica_token@,
+            old(self).unbounded_log_instance@ == final(self).unbounded_log_instance@,
+            old(self).cyclic_buffer_instance@ == final(self).cyclic_buffer_instance@,
+            res matches Some(res) ==> res.wf(final(self)),
     {
         self.thread_tokens.pop()
     }

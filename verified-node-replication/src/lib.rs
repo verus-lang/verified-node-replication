@@ -177,7 +177,7 @@ pub trait Dispatch: Sized {
     /// Executes a write operation against the data structure and returns the result.
     fn dispatch_mut(&mut self, op: Self::WriteOperation) -> (result: Self::Response)
         ensures
-            Self::dispatch_mut_spec(old(self)@, op) == (self@, result),
+            Self::dispatch_mut_spec(old(self)@, op) == (final(self)@, result),
     ;
 
     /// specification of the [`Dispatch::init`] function.
@@ -262,8 +262,8 @@ pub trait NodeReplicatedT<DT: Dispatch + Sync>: Sized {
         requires
             old(self).wf(),
         ensures
-            self.wf(),
-            result matches Some(r) ==> r.wf(&self.replicas()[replica_id as int]),
+            final(self).wf(),
+            result matches Some(r) ==> r.wf(&final(self).replicas()[replica_id as int]),
     ;
 
     /// executes an update operation against the data structure.
