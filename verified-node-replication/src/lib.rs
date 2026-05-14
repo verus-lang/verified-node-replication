@@ -394,7 +394,7 @@ pub open spec fn add_ticket<DT: Dispatch>(
 ) -> bool {
     !pre.local_reads.dom().contains(rid) && !pre.local_updates.dom().contains(rid) && (match input {
         InputOperation::Read(read_op) => {
-            &&post == UnboundedLog::State::<DT> {
+            post == UnboundedLog::State::<DT> {
                 local_reads: pre.local_reads.insert(
                     rid,
                     crate::spec::unbounded_log::ReadonlyState::Init { op: read_op },
@@ -403,7 +403,7 @@ pub open spec fn add_ticket<DT: Dispatch>(
             }
         },
         InputOperation::Write(write_op) => {
-            &&post == UnboundedLog::State::<DT> {
+            post == UnboundedLog::State::<DT> {
                 local_updates: pre.local_updates.insert(
                     rid,
                     crate::spec::unbounded_log::UpdateState::Init { op: write_op },
