@@ -185,8 +185,8 @@ FlatCombiner {
         initialize(num_threads: nat) {
             init num_threads = num_threads;
 
-            init clients = Map::new(|i:ThreadId| i < num_threads, |i| ClientState::Idle);
-            init slots = Map::new(|i: ThreadId| i < num_threads, |i| SlotState::Empty);
+            init clients = Map::new(Set::range(0, num_threads), |i| ClientState::Idle);
+            init slots = Map::new(Set::range(0, num_threads), |i| SlotState::Empty);
 
             init combiner = CombinerState::Collecting(Seq::empty());
         }

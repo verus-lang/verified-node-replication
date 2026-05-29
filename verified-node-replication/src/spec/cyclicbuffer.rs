@@ -349,14 +349,14 @@ tokenized_state_machine! { CyclicBuffer<DT: Dispatch> {
             init num_replicas = num_replicas;
             init head = 0;
             init tail = 0;
-            init local_versions = Map::new(|i: NodeId| 0 <= i < num_replicas, |i: NodeId| 0);
+            init local_versions = Map::new(Set::range(0, num_replicas), |i: NodeId| 0);
 
             require(forall |i: int| (-buffer_size <= i < 0 <==> contents.contains_key(i)));
             require(forall |i: int| #[trigger] contents.contains_key(i) ==> stored_type_inv(contents[i], i, cell_ids[log_entry_idx(i, buffer_size) as int], unbounded_log_instance));
             init contents = contents;
 
-            init alive_bits = Map::new(|i: nat| 0 <= i < buffer_size, |i: nat| !log_entry_alive_value(i as int, buffer_size));
-            init combiner = Map::new(|i: NodeId| 0 <= i < num_replicas, |i: NodeId| CombinerState::Idle);
+            init alive_bits = Map::new(Set::range(0, buffer_size), |i: nat| !log_entry_alive_value(i as int, buffer_size));
+            init combiner = Map::new(Set::range(0, num_replicas), |i: NodeId| CombinerState::Idle);
         }
     }
 
@@ -541,7 +541,7 @@ tokenized_state_machine! { CyclicBuffer<DT: Dispatch> {
 
             // construct the entries in the log we withdraw
             birds_eye let withdrawn = Map::new(
-                |i: int| pre.tail - pre.buffer_size <= i < new_tail - pre.buffer_size,
+                Set::range(pre.tail - pre.buffer_size, new_tail - pre.buffer_size),
                 |i: int| pre.contents[i],
             );
 

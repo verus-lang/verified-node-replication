@@ -69,7 +69,7 @@ struct_with_invariants!{
         ref_counts: Vec<CachePadded<AtomicU64<_, RwLockSpec::ref_counts<PointsTo<T>>, _>>>,
         /// the spec instance
         inst: Tracked<RwLockSpec::Instance<PointsTo<T>>>,
-        user_inv: Ghost<Set<T>>,
+        user_inv: Ghost<ISet<T>>,
     }
 
     pub closed spec fn wf(&self) -> bool {
@@ -147,8 +147,8 @@ impl<T> RwLock<T> {
         // create the pcell object
         let (pcell_data, Tracked(mut pcell_token)) = PCell::new(t);
         // create the set of allowed data structures
-        let ghost set_inv = Set::new(inv@);
-        let ghost user_inv = Set::new(
+        let ghost set_inv = ISet::new(inv@);
+        let ghost user_inv = ISet::new(
             |s: PointsTo<T>|
                 {
                     &&& equal(s@.pcell, pcell_data.id())
@@ -157,10 +157,10 @@ impl<T> RwLock<T> {
                 },
         );
         proof {
-            // user_inv: Set<T>, t: T
+            // user_inv: ISet<T>, t: T
             // initialize_full(user_inv, perm@, Option::Some(perm.get()));
             //
-            // initialize(rc_width: int, init_t: T, user_inv: Set<T>,) {
+            // initialize(rc_width: int, init_t: T, user_inv: ISet<T>,) {
             let tracked (
                 Tracked(inst0),
                 Tracked(exc_locked_token0),

@@ -583,12 +583,12 @@ UnboundedLog<DT: Dispatch> {
             init num_replicas = number_of_nodes;
             init log = Map::empty();
             init tail = 0;
-            init replicas = Map::new(|n: NodeId| n < number_of_nodes, |n| DT::init_spec());
-            init local_versions = Map::new(|n: NodeId| n < number_of_nodes, |n| 0);
+            init replicas = Map::new(Set::range(0, number_of_nodes), |n| DT::init_spec());
+            init local_versions = Map::new(Set::range(0, number_of_nodes), |n| 0);
             init version_upper_bound = 0;
             init local_reads = Map::empty();
             init local_updates = Map::empty();
-            init combiner = Map::new(|n: NodeId| n < number_of_nodes, |n| CombinerState::Ready);
+            init combiner = Map::new(Set::range(0, number_of_nodes), |n| CombinerState::Ready);
         }
     }
 
@@ -1285,9 +1285,6 @@ pub proof fn combiner_request_ids_finite(combiners: Map<NodeId, CombinerState>)
         let node_id = combiners.dom().choose();
         assert(combiner_request_ids(combiners.remove(node_id)).finite()) by {
             combiner_request_ids_finite(combiners.remove(node_id));
-        }
-        assert(seq_to_set(combiners[node_id].queued_ops()).finite()) by {
-            seq_to_set_is_finite(combiners[node_id].queued_ops());
         }
     }
 }
