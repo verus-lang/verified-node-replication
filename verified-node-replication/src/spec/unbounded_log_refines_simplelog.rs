@@ -180,7 +180,7 @@ spec fn interp_readonly_reqs<DT: Dispatch>(local_reads: Map<nat, ReadonlyState<D
     SReadReq<DT::ReadOperation>,
 > {
     Map::new(
-        |rid| local_reads.contains_key(rid),
+        local_reads.dom(),
         |rid|
             match local_reads.index(rid) {
                 ReadonlyState::Init { op } => SReadReq::Init { op },
@@ -205,7 +205,7 @@ spec fn interp_update_reqs<DT: Dispatch>(local_updates: Map<LogIdx, UpdateState<
     DT::WriteOperation,
 > {
     Map::new(
-        |rid| local_updates.contains_key(rid) && local_updates.index(rid).is_Init(),
+        local_updates.dom().filter(|rid| local_updates.index(rid).is_Init()),
         |rid|
             match local_updates.index(rid) {
                 UpdateState::Init { op } => op,
@@ -219,7 +219,7 @@ spec fn interp_update_resps<DT: Dispatch>(local_updates: Map<nat, UpdateState<DT
     SUpdateResp,
 > {
     Map::new(
-        |rid| local_updates.contains_key(rid) && !local_updates.index(rid).is_Init(),
+        local_updates.dom().filter(|rid| !local_updates.index(rid).is_Init()),
         |rid|
             match local_updates.index(rid) {
                 UpdateState::Init { op } => arbitrary(),

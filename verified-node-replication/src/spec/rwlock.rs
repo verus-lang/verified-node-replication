@@ -14,7 +14,7 @@ tokenized_state_machine!{
     RwLockSpec<T> {
         fields {
             #[sharding(constant)]
-            pub user_inv: Set<T>,
+            pub user_inv: ISet<T>,
 
             #[sharding(constant)]
             pub rc_width: int,
@@ -42,7 +42,7 @@ tokenized_state_machine!{
         }
 
         init!{
-            initialize(rc_width: int, init_t: T, user_inv: Set<T>,) {
+            initialize(rc_width: int, init_t: T, user_inv: ISet<T>,) {
                 require(0 < rc_width);
                 require(user_inv.contains(init_t));
                 init rc_width = rc_width;
@@ -50,7 +50,7 @@ tokenized_state_machine!{
                 init storage = Option::Some(init_t);
                 init exc_locked = false;
                 init ref_counts = Map::new(
-                    |i| 0 <= i < rc_width,
+                    Set::range(0, rc_width),
                     |i| 0,
                 );
                 init exc_pending = Option::None;
@@ -218,7 +218,7 @@ tokenized_state_machine!{
         }
 
         #[inductive(initialize)]
-        fn initialize_inductive(post: Self, rc_width: int, init_t: T,  user_inv: Set<T>) {
+        fn initialize_inductive(post: Self, rc_width: int, init_t: T,  user_inv: ISet<T>) {
             assert forall |r| 0 <= r < post.rc_width implies
                 #[trigger] post.ref_counts.index(r) ==
                     post.shared_pending.count(r) as int +

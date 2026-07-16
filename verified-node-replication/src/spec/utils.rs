@@ -98,17 +98,7 @@ proof fn seq_to_set_equal_rec<A>(seq: Seq<A>)
 }
 
 pub open spec fn seq_to_set<A>(seq: Seq<A>) -> Set<A> {
-    Set::new(|a: A| seq.contains(a))
-}
-
-pub proof fn seq_to_set_is_finite<A>(seq: Seq<A>)
-    ensures
-        seq_to_set(seq).finite(),
-{
-    assert(seq_to_set(seq).finite()) by {
-        seq_to_set_equal_rec(seq);
-        seq_to_set_rec_is_finite(seq);
-    }
+    seq.to_set()
 }
 
 pub open spec fn map_new_rec<V>(dom: nat, val: V) -> Map<nat, V>
