@@ -340,7 +340,7 @@ impl<T> RwLock<T> {
         }
         // (Ghost<Option<PointsTo<T>>>, Tracked<T>, Tracked<exc_guard<T>>>)
 
-        let tracked (_, Tracked(cell_perms), handle) = self.inst.borrow().exc_finish(token);
+        let tracked (_, Tracked(mut cell_perms), handle) = self.inst.borrow().exc_finish(token);
         // obtain the data
         let t = self.data.take(Tracked(&mut cell_perms));
         // return the Writer Guard
